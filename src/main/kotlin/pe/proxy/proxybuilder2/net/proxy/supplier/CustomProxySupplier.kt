@@ -3,8 +3,7 @@ package pe.proxy.proxybuilder2.net.proxy.supplier
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
-import pe.proxy.proxybuilder2.net.proxy.IProxyParser
-import pe.proxy.proxybuilder2.net.proxy.ProxyData
+import pe.proxy.proxybuilder2.net.proxy.data.SupplierProxyListData
 import pe.proxy.proxybuilder2.util.YamlProperties
 import java.net.URI
 import java.net.http.HttpClient
@@ -12,7 +11,7 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
 
-class CustomProxySupplier(override val proxies : ProxyData, appConfig : YamlProperties) : IProxyParser {
+class CustomProxySupplier(override val proxies : SupplierProxyListData, appConfig : YamlProperties) : IProxySupplier {
 
     private val logger = LoggerFactory.getLogger(CustomProxySupplier::class.java)
 
@@ -35,7 +34,7 @@ class CustomProxySupplier(override val proxies : ProxyData, appConfig : YamlProp
             return logger.error("Unable to read unparsed body data from supplier")
 
         val data = Json { this.encodeDefaults = true; this.ignoreUnknownKeys = true }
-        val parsed = data.decodeFromString<ProxyData>(unparsed!!)
+        val parsed = data.decodeFromString<SupplierProxyListData>(unparsed!!)
 
         proxies.http.addAll(parsed.http)
         proxies.https.addAll(parsed.https)

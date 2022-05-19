@@ -5,6 +5,10 @@ import org.springframework.boot.context.properties.ConstructorBinding
 
 @ConstructorBinding
 @ConfigurationProperties("app-config")
-data class YamlProperties(val endpointTestServers : List<String>, val proxySupplier : YamlProxySupplierProperties)
+data class YamlProperties(
+    val proxyOutputPath : String,
+    val endpointTestServers : List<String>, val proxySupplier : YamlProxySupplierProperties
+) {
+    data class YamlProxySupplierProperties(val mainUrl: String, val customUrl: String)
 
-data class YamlProxySupplierProperties(val mainUrl : String, val customUrl : String)
+}
