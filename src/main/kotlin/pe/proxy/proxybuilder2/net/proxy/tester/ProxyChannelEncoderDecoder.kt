@@ -4,8 +4,9 @@ import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
 import org.slf4j.LoggerFactory
+import pe.proxy.proxybuilder2.database.ProxyRepository
 
-class ProxyChannelEncoderDecoder {
+class ProxyChannelEncoderDecoder(private val proxyRepository : ProxyRepository) {
 
     private val logger = LoggerFactory.getLogger(ProxyChannelEncoderDecoder::class.java)
 
@@ -13,7 +14,7 @@ class ProxyChannelEncoderDecoder {
         val buffer = Unpooled.buffer(2)
         buffer.writeByte(14)
         buffer.writeByte(0)
-        ctx.channel().writeAndFlush(buffer)
+        ctx.channel().writeAndFlush(buffer);
     }
 
     fun decode(buffer : ByteBuf) {
@@ -29,6 +30,8 @@ class ProxyChannelEncoderDecoder {
         }
         if(valid)
             logger.info("Connected!")
+
+        logger.info("Count? ${proxyRepository.count()}")
 
         buffer.release()
     }

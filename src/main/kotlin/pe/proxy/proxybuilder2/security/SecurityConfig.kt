@@ -1,7 +1,6 @@
 package pe.proxy.proxybuilder2.security
 
 import org.springframework.context.annotation.Configuration
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter
@@ -19,12 +18,6 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 @EnableWebSecurity
 class SecurityConfig : WebSecurityConfigurerAdapter() {
 
-    @Throws(Exception::class)
-    override fun configure(authentication : AuthenticationManagerBuilder) {
-        //authentication.authenticationProvider(authenticationProvider)
-    }
-
-    @Throws(Exception::class)
     override fun configure(http : HttpSecurity) {
         http.authorizeRequests()
             .antMatchers("/api/proxype/running").permitAll()
@@ -32,4 +25,5 @@ class SecurityConfig : WebSecurityConfigurerAdapter() {
             //Disable CSRF (TEMP)
             .and().csrf().disable()
     }
+
 }
