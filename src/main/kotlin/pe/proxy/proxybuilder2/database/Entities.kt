@@ -29,8 +29,12 @@ class ProxyEntity {
     var ports: String? = null
 
     @Basic
-    @Column(name = "persistence", nullable = false)
-    var persistence: Double? = null
+    @Column(name = "protocols", nullable = false)
+    var protocols : String? = null
+
+    @Basic
+    @Column(name = "credentials", nullable = false)
+    var credentials : String? = null
 
     @Basic
     @Column(name = "country_data", nullable = true)
@@ -58,7 +62,8 @@ class ProxyEntity {
                 "id = $id " +
                 "ip = $ip " +
                 "ports = $ports " +
-                "persistence = $persistence " +
+                "protocols = $protocols " +
+                "credentials = $credentials " +
                 "countryData = $countryData " +
                 "connectData = $connectData " +
                 "riskData = $riskData " +
@@ -77,7 +82,8 @@ class ProxyEntity {
         if (id != other.id) return false
         if (ip != other.ip) return false
         if (ports != other.ports) return false
-        if (persistence != other.persistence) return false
+        if (protocols != other.protocols) return false
+        if (credentials != other.credentials) return false
         if (countryData != other.countryData) return false
         if (connectData != other.connectData) return false
         if (riskData != other.riskData) return false

@@ -6,19 +6,31 @@ import io.netty.handler.proxy.HttpProxyHandler
 import io.netty.handler.proxy.ProxyHandler
 import io.netty.handler.proxy.Socks4ProxyHandler
 import io.netty.handler.proxy.Socks5ProxyHandler
+import io.netty.handler.timeout.IdleStateHandler
 import pe.proxy.proxybuilder2.database.ProxyRepository
 import java.net.InetSocketAddress
 
-class ProxyChannelInitializer(val proxy : ProxyChannelData, val proxyRepository: ProxyRepository) : ChannelInitializer<SocketChannel>() {
+class ProxyChannelInitializer(private val proxy : ProxyChannelData,
+                              private val proxyRepository: ProxyRepository) : ChannelInitializer<SocketChannel>() {
 
     override fun initChannel(channel : SocketChannel) {
         val proxyHandler = proxyHandler()
         if(proxyHandler == null) { //Proxy protocol not specified
             channel.close()
         } else {
-            channel.pipeline()
-                .addFirst(proxyHandler)
-                .addLast(ProxyChannelHandler(ProxyChannelEncoderDecoder(proxyRepository)))
+            val pipeline = channel.pipeline()
+            pipeline.addFirst(proxyHandler)
+                .addLast(IdleStateHandler(5,5,5))
+
+           /* if(proxyHandler is HttpProxyHandler) { //TODO
+                pipeline.addLast(HttpRequestEncoder())
+                    .addLast(HttpObjectAggregator(8192))
+                    .addLast(HttpResponseDecoder())
+            }*/
+
+            val encoderDecoder = ProxyChannelEncoderDecoder(proxyRepository, proxy)
+            val handler = ProxyChannelHandler(encoderDecoder)
+            pipeline.addLast(handler)
         }
     }
 
@@ -31,4 +43,5 @@ class ProxyChannelInitializer(val proxy : ProxyChannelData, val proxyRepository:
             else -> null
         }
     }
+
 }

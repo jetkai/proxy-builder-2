@@ -3,21 +3,30 @@ package pe.proxy.proxybuilder2.net.proxy.data
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class SupplierProxyListData(var http : MutableList<String>, var https : MutableList<String>,
-                                 var socks4 : MutableList<String>, var socks5 : MutableList<String>) {
+data class SupplierProxyListData(val http : MutableList<String>, val https : MutableList<String>,
+                                 val socks4 : MutableList<String>, val socks5 : MutableList<String>) {
     fun isEmpty(): Boolean = http.isEmpty() && https.isEmpty() && socks4.isEmpty() && socks5.isEmpty()
 }
 
 @Serializable
-data class SQLProxyListData(
-    var http : MutableList<PerformanceProxyData>, var https : MutableList<PerformanceProxyData>,
-    var socks4 : MutableList<PerformanceProxyData>, var socks5 : MutableList<PerformanceProxyData>
-    ) {
-    fun isEmpty(): Boolean = http.isEmpty() && https.isEmpty() && socks4.isEmpty() && socks5.isEmpty()
+data class PerformanceConnectData(val ovh_FR : EndpointServerData, val aws_NA : EndpointServerData,
+                                  val ora_UK : EndpointServerData, val ora_JP : EndpointServerData,
+                                  val ms_HK : EndpointServerData) {
+
+    companion object {
+        fun default(): PerformanceConnectData {
+            val endpointServerData = EndpointServerData(0, ConnectionAttempts(0, 0), "0%")
+            return PerformanceConnectData(
+                endpointServerData, endpointServerData, endpointServerData,
+                endpointServerData, endpointServerData
+            )
+        }
+    }
+
 }
 
 @Serializable
-data class PerformanceProxyData(var ip : String, var port : Int, var protocol : String, var ping : EndpointPingData)
+data class EndpointServerData(var ping : Long, val connections : ConnectionAttempts, var uptime : String)
 
 @Serializable
-data class EndpointPingData(var ovh_FR : Long, var aws_NA : Long, var ora_UK : Long, var ms_HK : Long)
+data class ConnectionAttempts(var success : Int, var fail : Int)

@@ -16,7 +16,7 @@ class ProxyChannelHandler(private val proxyChannelEncoderDecoder : ProxyChannelE
 
     override fun channelRead(ctx : ChannelHandlerContext, msg : Any) {
         if(msg is ByteBuf)
-            proxyChannelEncoderDecoder.decode(msg)
+            proxyChannelEncoderDecoder.decode(ctx, msg)
         flushAndClose(ctx.channel())
     }
 

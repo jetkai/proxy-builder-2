@@ -1,19 +1,18 @@
 package pe.proxy.proxybuilder2.util
 
-import pe.proxy.proxybuilder2.net.proxy.data.PerformanceProxyData
 import java.sql.Timestamp
 import java.time.LocalDateTime
 import java.util.*
 
 /**
- * Misc
+ * Utils
  *
  * Miscellaneous functions used for date/time/math etc
  *
  * @author Kai
  * @version 1.0, 16/05/2022
  */
-object Misc {
+object Utils {
 
     val IS_WINDOWS = System.getProperty("os.name").startsWith("Windows")
 
@@ -27,6 +26,18 @@ object Misc {
                 filteredProxyList.add(nextProxy)
         }
         return filteredProxyList.distinct().toMutableList()
+    }
+
+    //Checks if proxy ip matches from start to end
+    fun ipMatch(proxyIp : String, remoteIp : String?) : Boolean {
+        return remoteIp != null && remoteIp == proxyIp
+    }
+
+    //remoteAddress = /0.0.0.0:8080
+    fun splitRemoteIp(remoteAddress : String) : String? {
+        if (!remoteAddress.contains(":"))
+            return null
+        return remoteAddress.split(":")[0].replace("/", "")
     }
 
     private fun formatIp(remoteAddress : String): String? {
@@ -47,12 +58,12 @@ object Misc {
         return ipArray.joinToString(separator = ".").plus(":").plus(port)
     }
 
-    fun sortByIp(proxyArray : MutableList<PerformanceProxyData>) : List<PerformanceProxyData> {
+/*    fun sortByIp(proxyArray : MutableList<PerformanceProxyData>) : List<PerformanceProxyData> {
         val comparator : Comparator<PerformanceProxyData> = Comparator {
                 ip1, ip2 -> toNumeric(ip1.ip).compareTo(toNumeric(ip2.ip))
         }
         return proxyArray.sortedWith(comparator)
-    }
+    }*/
 
     private fun toNumeric(remoteAddress : String) : Long {
         if (!remoteAddress.contains(":") || !remoteAddress.contains("."))
@@ -73,12 +84,12 @@ object Misc {
         return Timestamp(Date().time)
     }
 
-    fun getLocalDateAsTimestamp() : Timestamp {
+    fun getLocalDateNowAsTimestamp() : Timestamp {
         val date = LocalDateTime.now()
         return Timestamp.valueOf(date)
     }
 
-    fun getLocalDateAsTimestamp(minusMinutes: Long): Timestamp {
+    fun getLocalDateNowAsTimestamp(minusMinutes: Long): Timestamp {
         val date = LocalDateTime.now().minusMinutes(minusMinutes)
         return Timestamp.valueOf(date)
     }
