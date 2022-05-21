@@ -6,6 +6,7 @@ import io.netty.channel.Channel
 import io.netty.channel.ChannelFutureListener
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.SimpleChannelInboundHandler
+import org.slf4j.LoggerFactory
 
 class ProxyChannelHandler(private val proxyChannelEncoderDecoder : ProxyChannelEncoderDecoder)
     : SimpleChannelInboundHandler<String>() {
@@ -30,8 +31,8 @@ class ProxyChannelHandler(private val proxyChannelEncoderDecoder : ProxyChannelE
 
     @Deprecated("TODO -> This will be deprecated in a future Netty build")
     override fun exceptionCaught(ctx : ChannelHandlerContext, cause : Throwable) {
-        cause.printStackTrace()
         flushAndClose(ctx.channel())
+        cause.printStackTrace()
     }
 
     private fun flushAndClose(channel : Channel) {

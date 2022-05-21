@@ -25,8 +25,8 @@ class ProxyEntity {
     var ip: String? = null
 
     @Basic
-    @Column(name = "ports", nullable = false)
-    var ports: String? = null
+    @Column(name = "port", nullable = false)
+    var ports: Int? = null
 
     @Basic
     @Column(name = "protocols", nullable = false)
@@ -37,16 +37,20 @@ class ProxyEntity {
     var credentials : String? = null
 
     @Basic
-    @Column(name = "country_data", nullable = true)
-    var countryData: String? = null
+    @Column(name = "location", nullable = true)
+    var location: String? = null
 
     @Basic
-    @Column(name = "connect_data", nullable = false)
-    var connectData: String? = null
+    @Column(name = "connections", nullable = false)
+    var connections: String? = null
 
     @Basic
-    @Column(name = "risk_data", nullable = true)
-    var riskData: String? = null
+    @Column(name = "detection", nullable = true)
+    var detection: String? = null
+
+    @Basic
+    @Column(name = "provider", nullable = true)
+    var provider : String? = null
 
     @Basic
     @Column(name = "date_added", nullable = false)
@@ -56,40 +60,4 @@ class ProxyEntity {
     @Column(name = "last_tested", nullable = false)
     var lastTested: Timestamp? = null
 
-
-    override fun toString(): String =
-        "Entity of type: ${javaClass.name} ( " +
-                "id = $id " +
-                "ip = $ip " +
-                "ports = $ports " +
-                "protocols = $protocols " +
-                "credentials = $credentials " +
-                "countryData = $countryData " +
-                "connectData = $connectData " +
-                "riskData = $riskData " +
-                "dateAdded = $dateAdded " +
-                "lastTested = $lastTested " +
-                ")"
-
-    // constant value returned to avoid entity inequality to itself before and after it's update/merge
-    override fun hashCode(): Int = 42
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-        other as ProxyEntity
-
-        if (id != other.id) return false
-        if (ip != other.ip) return false
-        if (ports != other.ports) return false
-        if (protocols != other.protocols) return false
-        if (credentials != other.credentials) return false
-        if (countryData != other.countryData) return false
-        if (connectData != other.connectData) return false
-        if (riskData != other.riskData) return false
-        if (dateAdded != other.dateAdded) return false
-        if (lastTested != other.lastTested) return false
-
-        return true
-    }
 }

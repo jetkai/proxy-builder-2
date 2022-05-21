@@ -25,7 +25,7 @@ class ProxyInteraction(private val proxyRepository : ProxyRepository) {
 
     //Update single ProxyEntity
      fun updateEntity(entity : ProxyEntity, proxy : ProxyChannelData) {
-        entity.connectData = connectData(entity, proxy.endpoint, true, proxy.startTime)
+        entity.connections = connections(entity, proxy.endpointServer.name, true, proxy.startTime)
         entity.credentials = credentials(entity, proxy)
         entity.protocols = protocols(entity, proxy)
         proxyRepository.save(entity) //Writes to DB
@@ -49,8 +49,8 @@ class ProxyInteraction(private val proxyRepository : ProxyRepository) {
         }
     }
 
-    private fun connectData(entity : ProxyEntity, endpoint : String, connected : Boolean, startTime : Timestamp) : String {
-        val connectDataJson = entity.connectData
+    private fun connections(entity : ProxyEntity, endpoint : String, connected : Boolean, startTime : Timestamp) : String {
+        val connectDataJson = entity.connections
         var connectData = PerformanceConnectData.default()
         if(connectDataJson != null && connectDataJson.isNotEmpty())
             connectData = KotlinDeserializer().decode(connectDataJson)
@@ -84,12 +84,15 @@ class ProxyInteraction(private val proxyRepository : ProxyRepository) {
     }
 
     private fun protocols(entity : ProxyEntity, proxy : ProxyChannelData) : String {
-        var protocolData = Protocol(mutableListOf())
-        val protocolsJson = entity.connectData
+        var protocolData = ProtocolData(mutableListOf())
+        val protocolsJson = entity.connections
         if(protocolsJson != null && protocolsJson.isNotEmpty())
             protocolData = KotlinDeserializer().decode(protocolsJson)
-        if(!protocolData.protocols!!.contains(proxy.type))
-            protocolData.protocols!!.add(proxy.type)
+
+        val protocolNotExist = protocolData.protocol!!.none { it.port == proxy.port && it.type == proxy.type }
+        if(protocolNotExist)
+            protocolData.protocol!!.add(ProtocolDataType(proxy.type, proxy.port))
+
         return KotlinSerializer().encode(protocolData)
     }
 
@@ -99,12 +102,12 @@ class ProxyInteraction(private val proxyRepository : ProxyRepository) {
         val proxyEntity = ProxyEntity()
         proxyEntity.id = 0
         proxyEntity.ip = ip
-        proxyEntity.ports = port.toString()
+        proxyEntity.ports = port
         proxyEntity.protocols = protocol
         proxyEntity.credentials = null
-        proxyEntity.connectData = connectData
-        proxyEntity.countryData = countryData
-        proxyEntity.riskData = riskData
+        proxyEntity.connections = connectData
+        proxyEntity.location = countryData
+        proxyEntity.detection = riskData
         proxyEntity.dateAdded = Utils.getLocalDateNowAsTimestamp()
         proxyEntity.lastTested = Utils.getLocalDateNowAsTimestamp()
         return proxyEntity

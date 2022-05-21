@@ -16,6 +16,6 @@ interface ProxyRepository : CrudRepository<ProxyEntity, String> {
 
     fun findByIp(ip : String) : ProxyEntity
 
-    fun findByCountryData(data : String) : List<ProxyEntity>
+    fun findByLocationIsNull() : List<ProxyEntity>
 
 }

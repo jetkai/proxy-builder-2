@@ -3,6 +3,8 @@ package pe.proxy.proxybuilder2.net.proxy.supplier
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
+import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyDataType
+import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyListData
 import pe.proxy.proxybuilder2.net.proxy.data.SupplierProxyListData
 import pe.proxy.proxybuilder2.util.YamlProperties
 import java.net.URI
@@ -11,7 +13,7 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
 
-class MainProxySupplier(override val proxies: SupplierProxyListData, appConfig: YamlProperties) : IProxySupplier {
+class MainProxySupplier(override val finalProxyList : FinalProxyListData, appConfig: YamlProperties) : IProxySupplier {
 
     private val logger = LoggerFactory.getLogger(MainProxySupplier::class.java)
 
@@ -35,15 +37,27 @@ class MainProxySupplier(override val proxies: SupplierProxyListData, appConfig: 
         val data = Json { this.encodeDefaults = true; this.ignoreUnknownKeys = true }
         val parsed = data.decodeFromString<SupplierProxyListData>(unparsed!!)
 
-        proxies.http.addAll(parsed.http)
-        proxies.https.addAll(parsed.https)
-        proxies.socks4.addAll(parsed.socks4)
-        proxies.socks5.addAll(parsed.socks5)
+        val hashMap = HashMap<String, MutableList<String>>()
+
+        hashMap["http"] = parsed.http
+        hashMap["https"] = parsed.https
+        hashMap["socks4"] = parsed.socks4
+        hashMap["socks5"] = parsed.socks5
+
+        for ((key, proxyList) in hashMap) {
+            for(proxy in proxyList) {
+                if(!proxy.contains(":") || proxy.length > 23)
+                    continue
+                val ip = proxy.split(":")[0]
+                val port = proxy.split(":")[1]
+                finalProxyList.proxies.add(FinalProxyDataType(key, ip, port.toInt()))
+            }
+        }
 
         logger.info(
             "Parsing complete -> " +
-                "[HTTP:${proxies.http.size} | HTTPS:${proxies.https.size} | " +
-                "SOCKS4:${proxies.socks4.size} | SOCKS5:${proxies.socks5.size}]"
+                "[HTTP:${finalProxyList.size("http")} | HTTPS:${finalProxyList.size("https")} | " +
+                "SOCKS4:${finalProxyList.size("socks4")} | SOCKS5:${finalProxyList.size("socks5")}]"
         )
     }
 }

@@ -77,6 +77,8 @@ dependencies {
 
     //MariaDB - SQL Database for storing the tested Proxies
     runtimeOnly("org.mariadb.jdbc:mariadb-java-client:3.0.4")
+    //Reflection for Kotlin
+    runtimeOnly("org.jetbrains.kotlin:kotlin-reflect:1.6.21")
 }
 
 tasks.withType<KotlinCompile> {

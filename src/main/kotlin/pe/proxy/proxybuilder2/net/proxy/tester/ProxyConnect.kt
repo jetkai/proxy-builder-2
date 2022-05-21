@@ -9,11 +9,14 @@ import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.ApplicationListener
 import org.springframework.stereotype.Component
 import pe.proxy.proxybuilder2.database.ProxyRepository
-import pe.proxy.proxybuilder2.net.proxy.data.SupplierProxyListData
-import pe.proxy.proxybuilder2.net.proxy.supplier.CustomProxySupplier
+import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyListData
+import pe.proxy.proxybuilder2.net.proxy.supplier.MainProxySupplier
 import pe.proxy.proxybuilder2.util.Utils
 import pe.proxy.proxybuilder2.util.YamlProperties
 import java.net.InetSocketAddress
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 
 @Component
 class ProxyConnect(val proxyRepository : ProxyRepository,
@@ -21,46 +24,53 @@ class ProxyConnect(val proxyRepository : ProxyRepository,
 
     private val logger = LoggerFactory.getLogger(ProxyConnect::class.java)
 
-   private val bossGroup = NioEventLoopGroup(250)
+   private val bossGroup = NioEventLoopGroup()
+
+    private val executor : ScheduledExecutorService = Executors.newScheduledThreadPool(1)
 
     override fun onApplicationEvent(event : ApplicationReadyEvent) {
-        initialize()
+        executor.schedule({ ->
+            initialize()
+        }, 0, TimeUnit.SECONDS)
     }
 
     private fun initialize() {
 
-        val supplierProxyListData = SupplierProxyListData(mutableListOf(), mutableListOf(), mutableListOf(), mutableListOf())
-        val customProxySupplier = CustomProxySupplier(supplierProxyListData, apiConfig)
+        val supplierProxyListData = FinalProxyListData(mutableListOf())
+        val proxySupplier = MainProxySupplier(supplierProxyListData, apiConfig)
 
-        customProxySupplier
+        proxySupplier
             .request()  //Requests proxies from the web
             .parse()    //Attempt to parse the proxies from the web
 
-
-  /*      for(proxy in customProxySupplier.proxies.https) {
-            val ip = proxy.split(":")[0]
-            val port = proxy.split(":")[1]
-            val proxyChannelData = ProxyChannelData(ip, port.toInt(), "http", "", "")
-            connect(proxyChannelData)
-        }*/
-
-        val proxyChannelData = ProxyChannelData("80.90.80.54", 8080,
-            "http", "", "", Utils.getLocalDateNowAsTimestamp(), "aws_NA")
-        connect(proxyChannelData)
+        for(proxy in proxySupplier.finalProxyList.proxies) {
+            val endpointServers = apiConfig.endpointServers
+            for(endpointServer in endpointServers) {
+                if(endpointServer.name.startsWith("!"))
+                    continue
+                val proxyChannelData = ProxyChannelData(proxy.ip, proxy.port, proxy.protocol,
+                    "", "", Utils.getLocalDateNowAsTimestamp(), endpointServer
+                )
+                connect(proxyChannelData)
+            }
+        }
 
         logger.info("Done.")
     }
 
     private fun connect(proxyChannelData : ProxyChannelData) {
-        logger.info("Connecting to proxy ${proxyChannelData.ip}:${proxyChannelData.port}")
+        val endpoint = proxyChannelData.endpointServer
 
-        val bootstrap = Bootstrap()
-        bootstrap.group(bossGroup)
-            .channel(NioSocketChannel::class.java)
-            .option(ChannelOption.TCP_NODELAY, true)
-            .option(ChannelOption.AUTO_CLOSE, true)
-            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
-            .handler(ProxyChannelInitializer(proxyChannelData, proxyRepository))
-            .connect(InetSocketAddress("132.145.126.3", 43594))
+        logger.info("Proxy -> ${proxyChannelData.ip}:${proxyChannelData.port} " +
+                "| Endpoint -> ${endpoint.ip}:${endpoint.port}")
+
+            val bootstrap = Bootstrap()
+            bootstrap.group(bossGroup)
+                .channel(NioSocketChannel::class.java)
+                .option(ChannelOption.TCP_NODELAY, true)
+                .option(ChannelOption.AUTO_CLOSE, true)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
+                .handler(ProxyChannelInitializer(proxyChannelData, proxyRepository))
+                .connect(InetSocketAddress(endpoint.ip, endpoint.port)).await(50L)
     }
 }
