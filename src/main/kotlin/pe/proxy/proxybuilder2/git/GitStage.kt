@@ -3,6 +3,12 @@ package pe.proxy.proxybuilder2.git
 import java.text.SimpleDateFormat
 import java.util.*
 
+/**
+ * GitStage
+ *
+ * @author Kai
+ * @version 1.0, 19/05/2022
+ */
 enum class GitStage(val command : Array<String>) {
 
     NOT_RUNNING(emptyArray()),

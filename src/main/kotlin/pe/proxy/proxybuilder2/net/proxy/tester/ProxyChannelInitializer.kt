@@ -2,35 +2,47 @@ package pe.proxy.proxybuilder2.net.proxy.tester
 
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.socket.SocketChannel
+import io.netty.handler.logging.LogLevel
+import io.netty.handler.logging.LoggingHandler
 import io.netty.handler.proxy.HttpProxyHandler
 import io.netty.handler.proxy.ProxyHandler
 import io.netty.handler.proxy.Socks4ProxyHandler
 import io.netty.handler.proxy.Socks5ProxyHandler
 import io.netty.handler.timeout.IdleStateHandler
-import pe.proxy.proxybuilder2.database.ProxyRepository
+import org.slf4j.LoggerFactory
 import java.net.InetSocketAddress
 
-class ProxyChannelInitializer(private val proxy : ProxyChannelData,
-                              private val proxyRepository: ProxyRepository) : ChannelInitializer<SocketChannel>() {
+/**
+ * ProxyChannelInitializer
+ *
+ * @author Kai
+ * @version 1.0, 19/05/2022
+ */
+class ProxyChannelInitializer(private val proxy : ProxyChannelData) : ChannelInitializer<SocketChannel>() {
+
+    private val logger = LoggerFactory.getLogger(ProxyChannelInitializer::class.java)
 
     override fun initChannel(channel : SocketChannel) {
         val proxyHandler = proxyHandler()
-        if(proxyHandler == null) { //Proxy protocol not specified
+        if (proxyHandler == null) {
+            logger.error("Protocol not specified")
             channel.close()
         } else {
-            val pipeline = channel.pipeline()
-            pipeline.addFirst(proxyHandler)
-                .addLast(IdleStateHandler(5,5,5))
-
-           /* if(proxyHandler is HttpProxyHandler) { //TODO
-                pipeline.addLast(HttpRequestEncoder())
-                    .addLast(HttpObjectAggregator(8192))
-                    .addLast(HttpResponseDecoder())
-            }*/
-
-            val encoderDecoder = ProxyChannelEncoderDecoder(proxyRepository, proxy)
+            proxyHandler.setConnectTimeoutMillis(10000L)
+            val encoderDecoder = ProxyChannelEncoderDecoder(proxy)
             val handler = ProxyChannelHandler(encoderDecoder)
-            pipeline.addLast(handler)
+
+            channel.pipeline()
+                .addLast(LoggingHandler(LogLevel.DEBUG))
+                .addLast(IdleStateHandler(0, 0, 10))
+                .addLast(proxyHandler)
+                .addLast(handler)
+
+            /* if(proxyHandler is HttpProxyHandler) { //TODO
+            pipeline.addLast(HttpRequestEncoder())
+                .addLast(HttpObjectAggregator(8192))
+                .addLast(HttpResponseDecoder())
+            }*/
         }
     }
 

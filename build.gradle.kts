@@ -41,8 +41,11 @@ dependencies {
     //KotlinX - Serializing JSON data to Kotlin Class
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.3")
 
-    //Jackson Module for Serialization to Kotlin Classes
+    //Jackson Modules for serialization/deserialization
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.13.3")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.13.3")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.13.3")
 
     //Netty4 - Connecting to Endpoint Test Server, Testing the Proxy
     implementation("io.netty:netty-all:4.1.77.Final")
@@ -52,6 +55,7 @@ dependencies {
 
     //Spring Web - Minor API for checking if Application is running
     implementation("org.springframework.boot:spring-boot-starter-web")
+
 
     //WebFlux & Reactor - Minor API for checking if Application is running
     //implementation("org.springframework.boot:spring-boot-starter-webflux")
@@ -64,12 +68,16 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
+    //implementation("org.junit.jupiter:junit-jupiter:5.8.2")
 
     //Unit Testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.projectreactor:reactor-test")
+    //testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")
+    //testImplementation("org.mockito:mockito-core:4.5.1")
+    //testImplementation("org.hamcrest:hamcrest:2.2")
 
-    //Configuration Processor - For YML configs
+    //Configuration Processor - For YAML configs
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 
     //Devtools - Live debugging

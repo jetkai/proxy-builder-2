@@ -3,7 +3,10 @@ package pe.proxy.proxybuilder2.git
 import org.slf4j.LoggerFactory
 
 /**
+ * GitActions
+ *
  * @author Kai
+ * @version 1.0, 19/05/2022
  */
 class GitActions {
 

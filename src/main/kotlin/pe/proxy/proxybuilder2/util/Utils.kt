@@ -1,8 +1,10 @@
 package pe.proxy.proxybuilder2.util
 
+import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyDataType
+import pe.proxy.proxybuilder2.net.proxy.data.PerformanceConnectData
 import java.sql.Timestamp
 import java.time.LocalDateTime
-import java.util.*
+import java.util.regex.Pattern
 
 /**
  * Utils
@@ -16,22 +18,14 @@ object Utils {
 
     val IS_WINDOWS = System.getProperty("os.name").startsWith("Windows")
 
-    private fun filterProxies(unfilteredProxyList : MutableList<String>) : MutableList<String> {
-        val filteredProxyList = mutableListOf<String>()
-        unfilteredProxyList.filter {
-            it.contains(":")
-        }.forEach {
-            val nextProxy = formatIp(it)
-            if(nextProxy != null)
-                filteredProxyList.add(nextProxy)
-        }
-        return filteredProxyList.distinct().toMutableList()
+    fun removeBadIps(proxies : MutableList<FinalProxyDataType>) : MutableList<FinalProxyDataType> {
+        val pattern = Pattern.compile("^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(\\.(?!$)|$)){4}$")
+        proxies.removeIf { !pattern.matcher(it.ip).matches() }
+        return proxies
     }
 
     //Checks if proxy ip matches from start to end
-    fun ipMatch(proxyIp : String, remoteIp : String?) : Boolean {
-        return remoteIp != null && remoteIp == proxyIp
-    }
+    fun ipMatch(proxyIp : String, remoteIp : String?) : Boolean = remoteIp != null && remoteIp == proxyIp
 
     //remoteAddress = /0.0.0.0:8080
     fun splitRemoteIp(remoteAddress : String) : String? {
@@ -58,40 +52,57 @@ object Utils {
         return ipArray.joinToString(separator = ".").plus(":").plus(port)
     }
 
-/*    fun sortByIp(proxyArray : MutableList<PerformanceProxyData>) : List<PerformanceProxyData> {
-        val comparator : Comparator<PerformanceProxyData> = Comparator {
+    private fun replaceBadValues(remoteAddress : String) : String =
+        remoteAddress.replace("\n", "").replace("\r", "")
+
+    fun sortByIp(proxyArray : MutableList<FinalProxyDataType>) : List<FinalProxyDataType> {
+        val comparator : Comparator<FinalProxyDataType> = Comparator {
                 ip1, ip2 -> toNumeric(ip1.ip).compareTo(toNumeric(ip2.ip))
         }
         return proxyArray.sortedWith(comparator)
-    }*/
-
-    private fun toNumeric(remoteAddress : String) : Long {
-        if (!remoteAddress.contains(":") || !remoteAddress.contains("."))
-            return -1
-
-        val ip = replaceBadValues(remoteAddress.split(":")[0])
-        val finalIpArray = ip.split(".")
-
-        return ((finalIpArray[0].toLong() shl 24) + (finalIpArray[1].toLong() shl 16) + (finalIpArray[2].toLong() shl 8)
-                + finalIpArray[3].toLong())
     }
 
-    private fun replaceBadValues(remoteAddress : String) : String {
-        return remoteAddress.replace("\n", "").replace("\r", "")
+    fun sortByIp2(proxyArray : List<String>) : List<String> {
+        val comparator : Comparator<String> = Comparator {
+                ip1, ip2 -> toNumeric(ip1).compareTo(toNumeric(ip2))
+        }
+        return proxyArray.sortedWith(comparator)
     }
 
-    fun getDateAsTimestamp(): Timestamp {
-        return Timestamp(Date().time)
+    private fun toNumeric(ip : String) : Long {
+        if (!ip.contains("."))
+            return 0L
+
+        val finalIp = ip.split(".")
+
+        return ((finalIp[0].toLong() shl 24) + (finalIp[1].toLong() shl 16) +
+                (finalIp[2].toLong() shl 8) + finalIp[3].toLong())
     }
 
-    fun getLocalDateNowAsTimestamp() : Timestamp {
-        val date = LocalDateTime.now()
-        return Timestamp.valueOf(date)
+    private fun filterProxies(unfilteredProxyList : MutableList<String>) : MutableList<String> {
+        val filteredProxyList = mutableListOf<String>()
+        unfilteredProxyList.filter {
+            it.contains(":")
+        }.forEach {
+            val nextProxy = formatIp(it)
+            if(nextProxy != null)
+                filteredProxyList.add(nextProxy)
+        }
+        return filteredProxyList.distinct().toMutableList()
     }
 
-    fun getLocalDateNowAsTimestamp(minusMinutes: Long): Timestamp {
-        val date = LocalDateTime.now().minusMinutes(minusMinutes)
-        return Timestamp.valueOf(date)
+    fun lowestPing(connectionData: PerformanceConnectData) : Long {
+        val pingArray = listOf(
+            connectionData.aws_NA?.ping!!, connectionData.ms_HK?.ping!!,
+            connectionData.ora_JP?.ping!!, connectionData.ora_UK?.ping!!,
+            connectionData.ovh_FR?.ping!!
+        )
+        return pingArray.filter { it != 0L }.minOf { it }
     }
+
+    fun timestampNow() : Timestamp = Timestamp.valueOf(LocalDateTime.now())
+
+    fun timestampMinus(minusMinutes : Long) : Timestamp =
+        Timestamp.valueOf(LocalDateTime.now().minusMinutes(minusMinutes))
 
 }

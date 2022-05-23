@@ -1,39 +1,47 @@
 package pe.proxy.proxybuilder2.database
 
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonInclude
 import java.sql.Timestamp
 import javax.persistence.*
 
 /**
- * Entities
+ * ProxyEntity
  *
  * Serializer/Deserializer placeholder
  * Reserve Name Ref: https://dev.mysql.com/doc/refman/8.0/en/keywords.html#keywords-8-0-detailed-I
+ * (Future revision use OneToOne https://www.baeldung.com/jpa-one-to-one & deprecate json)
  *
  * @author Kai
  * @version 1.0, 15/05/2022
  */
 @Entity
 @Table(name = "all_proxies", schema = "localdb")
+@JsonInclude(JsonInclude.Include.NON_NULL)
 class ProxyEntity {
 
-    @Basic
+    @Id
+    @GeneratedValue(strategy=GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
+    @JsonIgnore
     var id: Int? = null
 
-    @Id
+    @Basic
     @Column(name = "ip", nullable = false)
     var ip: String? = null
 
     @Basic
     @Column(name = "port", nullable = false)
-    var ports: Int? = null
+    var port : Int? = null
+
+    // @Enumerated(EnumType.STRING)
+    // @JoinColumn(name = "protocols")
+    @Basic
+    @Column(name = "protocols", nullable = true)
+    var protocols : String ?=null
 
     @Basic
-    @Column(name = "protocols", nullable = false)
-    var protocols : String? = null
-
-    @Basic
-    @Column(name = "credentials", nullable = false)
+    @Column(name = "credentials", nullable = true)
     var credentials : String? = null
 
     @Basic
@@ -59,5 +67,9 @@ class ProxyEntity {
     @Basic
     @Column(name = "last_tested", nullable = false)
     var lastTested: Timestamp? = null
+
+    @Basic
+    @Column(name = "last_success", nullable = true)
+    var lastSuccess: Timestamp? = null
 
 }

@@ -20,7 +20,7 @@ class SecurityConfig : WebSecurityConfigurerAdapter() {
 
     override fun configure(http : HttpSecurity) {
         http.authorizeRequests()
-            .antMatchers("/api/proxype/running").permitAll()
+            .antMatchers("/api/v1/*").permitAll()
             .anyRequest().authenticated()
             //Disable CSRF (TEMP)
             .and().csrf().disable()
