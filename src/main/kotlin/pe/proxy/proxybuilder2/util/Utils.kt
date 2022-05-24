@@ -1,10 +1,18 @@
 package pe.proxy.proxybuilder2.util
 
+import com.fasterxml.jackson.core.JsonFactory
+import com.fasterxml.jackson.core.JsonToken
 import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyDataType
 import pe.proxy.proxybuilder2.net.proxy.data.PerformanceConnectData
+import pe.proxy.proxybuilder2.net.proxy.proxycheckio.LocationData
+import pe.proxy.proxybuilder2.net.proxy.proxycheckio.OperatorData
+import pe.proxy.proxybuilder2.net.proxy.proxycheckio.PoliciesData
+import pe.proxy.proxybuilder2.net.proxy.proxycheckio.RiskData
 import java.sql.Timestamp
 import java.time.LocalDateTime
 import java.util.regex.Pattern
+import kotlin.reflect.KMutableProperty
+import kotlin.reflect.full.memberProperties
 
 /**
  * Utils
@@ -98,6 +106,63 @@ object Utils {
             connectionData.ovh_FR?.ping!!
         )
         return pingArray.filter { it != 0L }.minOf { it }
+    }
+
+    //Custom Serializer - What could go wrong :)
+    fun serialize(json : String) : List<*> {
+        val entries = deserialize(json)
+
+        //DO NOT CHANGE THE ORDER -> PoliciesData() has to be index0
+        val clazzes = listOf(PoliciesData(), OperatorData(), LocationData(), RiskData())
+
+        for(clazz in clazzes) run {
+            clazz::class.memberProperties.filterIsInstance<KMutableProperty<*>>()
+                .forEach {
+                    if(entries.containsKey(it.name)) {
+                        val value = entries.getValue(it.name)
+                        it.setter.call(clazz, value)
+                    }
+                }
+        }
+
+        return clazzes
+    }
+
+    //Custom Deserializer - What could go wrong :)
+    fun deserialize(json : String) : LinkedHashMap<String, Any> {
+        val map = LinkedHashMap<String, Any>()
+        val factory = JsonFactory()
+        val jsonParser = factory.createParser(json)
+
+        while (!jsonParser.isClosed) {
+            val nextToken = jsonParser.nextToken()
+            val name = jsonParser.currentName
+            var value : Any? = null
+
+            when (nextToken) {
+                JsonToken.VALUE_STRING -> {
+                    value = jsonParser.valueAsString
+                    //Parse yes & no as true/false Booleans
+                    if(value == "yes" || value == "no") {
+                        value = (value == "yes")
+                    }
+                }
+                JsonToken.VALUE_NUMBER_INT -> {
+                    value = if(name == "longitude" || name == "latitude")
+                        jsonParser.floatValue //Happens when longitude is 32 and not 32.841
+                    else
+                        jsonParser.valueAsInt
+                }
+                JsonToken.VALUE_TRUE, JsonToken.VALUE_FALSE -> { value = jsonParser.valueAsBoolean }
+                JsonToken.VALUE_NUMBER_FLOAT -> { value = jsonParser.floatValue }
+                else -> {}
+            }
+
+            if(name != null && value != null)
+                map[name] = value
+        }
+
+        return map
     }
 
     fun timestampNow() : Timestamp = Timestamp.valueOf(LocalDateTime.now())

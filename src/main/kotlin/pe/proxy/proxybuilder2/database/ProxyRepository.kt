@@ -23,6 +23,8 @@ interface ProxyRepository : CrudRepository<ProxyEntity, String> {
 
     fun findByLocationIsNullAndLastSuccessIsNotNull() : List<ProxyEntity>
 
+    fun findByLocationIsNotNullAndLastSuccessIsNotNull() : List<ProxyEntity>
+
     fun findByLastSuccessAfter(timestamp : Timestamp) : List<ProxyEntity>
 
 }
