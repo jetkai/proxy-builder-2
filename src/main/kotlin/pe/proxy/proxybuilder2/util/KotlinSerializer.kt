@@ -11,11 +11,11 @@ import kotlinx.serialization.json.encodeToJsonElement
  * @author Kai
  * @version 1.0, 19/05/2022
  */
-class KotlinSerializer {
+object KotlinSerializer {
 
     val json = Json { this.encodeDefaults = true; this.ignoreUnknownKeys = true }
 
-    inline fun <reified T> encodeString(value : T) : String {
+    inline fun <reified T> encode(value : T) : String {
         return json.encodeToString(value)
     }
 

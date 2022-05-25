@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit
  */
 @Component
 class QueryApi(private val proxyRepository : ProxyRepository,
-               private val appConfig : ProxyConfig) : ApplicationListener<ApplicationReadyEvent> {
+               private val config : ProxyConfig) : ApplicationListener<ApplicationReadyEvent> {
 
     private val logger = LoggerFactory.getLogger(QueryApi::class.java)
 
@@ -38,10 +38,11 @@ class QueryApi(private val proxyRepository : ProxyRepository,
 
     override fun onApplicationEvent(event : ApplicationReadyEvent) {
         //Runs query() every minute
-        executor.scheduleAtFixedRate({ this.query() }, 0, 1, TimeUnit.MINUTES)
+        if(config.enabledThreads.queryApi)
+            executor.scheduleAtFixedRate({ initialize() }, 0, 1, TimeUnit.MINUTES)
     }
 
-    fun query() {
+    fun initialize() {
         logger.info("Querying ProxyCheck API")
 
         val entitiesFromRepository = proxyRepository.findByLocationIsNullAndLastSuccessIsNotNull()
@@ -56,18 +57,17 @@ class QueryApi(private val proxyRepository : ProxyRepository,
 
             val jsonResponse = client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).get().body()
             val clazzes = Utils.serialize(jsonResponse)
-            val serializer = KotlinSerializer()
 
             clazzes.forEach { clazz ->
                 when (clazz) {
-                    is LocationData -> entity.location = serializer.encodeString(clazz)
-                    is RiskData -> entity.detection = serializer.encodeString(clazz)
+                    is LocationData -> entity.location = KotlinSerializer.encode(clazz)
+                    is RiskData -> entity.detection = KotlinSerializer.encode(clazz)
                     is OperatorData -> {
                         val policiesClazz = clazzes[0]
                         if (policiesClazz is PoliciesData && !policiesClazz.isEmpty())
                             clazz.policies = policiesClazz
                         if (!clazz.isEmpty())
-                            entity.provider = serializer.encodeString(clazz)
+                            entity.provider = KotlinSerializer.encode(clazz)
                     }
                 }
             }
@@ -80,7 +80,7 @@ class QueryApi(private val proxyRepository : ProxyRepository,
 
     fun apiURI(proxyIp : String) : URI {
         return URI.create("http://proxycheck.io/v2/$proxyIp?" +
-                "key=${appConfig.proxyCheckIo.apiKey}&vpn=1&asn=1&risk=2&seen=1&tag=msg")
+                "key=${config.proxyCheckIo.apiKey}&vpn=1&asn=1&risk=2&seen=1&tag=msg")
         //http://proxycheck.io/v2/80.90.80.54?key=7y658u-044228-737v80-64lq59" (Example IP/Key)
     }
 

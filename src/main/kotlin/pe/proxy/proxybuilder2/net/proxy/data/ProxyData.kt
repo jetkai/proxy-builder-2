@@ -27,8 +27,13 @@ data class PerformanceConnectData(val ovh_FR : EndpointServerData?=null, val aws
                                   val ora_UK : EndpointServerData?=null, val ora_JP : EndpointServerData?=null,
                                   val ms_HK : EndpointServerData?=null) {
         fun default() : PerformanceConnectData =
-            PerformanceConnectData(EndpointServerData().default(), EndpointServerData().default(),
-                EndpointServerData().default(), EndpointServerData().default(), EndpointServerData().default())
+            PerformanceConnectData(
+                EndpointServerData().default(),
+                EndpointServerData().default(),
+                EndpointServerData().default(),
+                EndpointServerData().default(),
+                EndpointServerData().default()
+            )
 
 }
 

@@ -109,7 +109,7 @@ class ProxyInteraction(private val repository : ProxyRepository) {
         val connectDataJson = entity.connections
         var connectData = PerformanceConnectData().default()
         if(connectDataJson != null && connectDataJson.isNotEmpty())
-            connectData = KotlinDeserializer().decode(connectDataJson)!!
+            connectData = KotlinDeserializer.decode(connectDataJson)!!
 
         var endpointData : EndpointServerData ?= null
 
@@ -144,13 +144,13 @@ class ProxyInteraction(private val repository : ProxyRepository) {
             endpointData.cleanSocket = proxy.response.cleanSocket == true
         }
 
-        return KotlinSerializer().encodeString(connectData)
+        return KotlinSerializer.encode(connectData)
     }
 
     private fun credentials(proxy: ProxyChannelData) : String? {
         val credentialsData = ProxyCredentials(proxy.username,  proxy.password)
         if(!credentialsData.empty())
-            return KotlinSerializer().encodeString(credentialsData)
+            return KotlinSerializer.encode(credentialsData)
 
         return null
     }
@@ -160,9 +160,8 @@ class ProxyInteraction(private val repository : ProxyRepository) {
         var protocolData = ProtocolData(defaultData)
         try {
             val protocolsJson = entity.protocols
-            if (protocolsJson != null && protocolsJson.isNotEmpty()) {
-                protocolData = KotlinDeserializer().decode(protocolsJson)!!
-            }
+            if (protocolsJson != null && protocolsJson.isNotEmpty())
+                protocolData = KotlinDeserializer.decode(protocolsJson)!!
 
             val protocol = protocolData.protocol
             val protocolIsNotInList = protocol.none { it.port == proxy.port && it.type == proxy.type }
@@ -174,7 +173,7 @@ class ProxyInteraction(private val repository : ProxyRepository) {
             t.printStackTrace()
         }
 
-        return KotlinSerializer().encodeString(protocolData)
+        return KotlinSerializer.encode(protocolData)
     }
 
     private fun time(entity : ProxyEntity, proxy : ProxyChannelData) {

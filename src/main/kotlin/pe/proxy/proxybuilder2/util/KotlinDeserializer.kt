@@ -11,7 +11,7 @@ import kotlinx.serialization.json.decodeFromJsonElement
  * @author Kai
  * @version 1.0, 19/05/2022
  */
-class KotlinDeserializer {
+object KotlinDeserializer {
 
     val data = Json { this.encodeDefaults = true; this.ignoreUnknownKeys = true }
 

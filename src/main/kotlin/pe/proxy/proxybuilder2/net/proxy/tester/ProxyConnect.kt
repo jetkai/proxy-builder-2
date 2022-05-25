@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component
 import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyDataType
 import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyListData
 import pe.proxy.proxybuilder2.net.proxy.supplier.CustomProxySupplier
+import pe.proxy.proxybuilder2.net.proxy.supplier.MainProxySupplier
 import pe.proxy.proxybuilder2.util.ProxyConfig
 import pe.proxy.proxybuilder2.util.Utils
 import java.net.InetSocketAddress
@@ -27,7 +28,7 @@ import java.util.concurrent.TimeUnit
  * @version 1.0, 19/05/2022
  */
 @Component
-class ProxyConnect(val proxyConfig: ProxyConfig) : ApplicationListener<ApplicationReadyEvent> {
+class ProxyConnect(val config : ProxyConfig) : ApplicationListener<ApplicationReadyEvent> {
 
     private val logger = LoggerFactory.getLogger(ProxyConnect::class.java)
 
@@ -40,12 +41,13 @@ class ProxyConnect(val proxyConfig: ProxyConfig) : ApplicationListener<Applicati
     }
 
     override fun onApplicationEvent(event : ApplicationReadyEvent) {
-        executor.scheduleAtFixedRate({ initialize() }, 0, 90, TimeUnit.MINUTES)
+        if(config.enabledThreads.proxyConnect)
+            executor.scheduleAtFixedRate({ initialize() }, 0, 90, TimeUnit.MINUTES)
     }
 
     private fun initialize() {
         val supplierProxyListData = FinalProxyListData(mutableListOf())
-        val proxySupplier = CustomProxySupplier(supplierProxyListData, proxyConfig)
+        val proxySupplier = MainProxySupplier(supplierProxyListData, config)
 
         proxySupplier
             .request()  //Requests proxies from the web
@@ -54,7 +56,7 @@ class ProxyConnect(val proxyConfig: ProxyConfig) : ApplicationListener<Applicati
         val proxies =
             //Utils.sortByIp(
             Utils.removeBadIps(proxySupplier.data.proxies
-                .filter { it.protocol == "socks5" }.toMutableList()
+                //.filter { it.protocol == "socks5" }.toMutableList()
                 // )
             ).shuffled()
 
@@ -65,7 +67,7 @@ class ProxyConnect(val proxyConfig: ProxyConfig) : ApplicationListener<Applicati
 
     fun loop(proxies : List<FinalProxyDataType>) {
         for (proxy in proxies) {
-            val endpointServers = proxyConfig.endpointServers
+            val endpointServers = config.endpointServers
             for (endpointServer in endpointServers) {
                 if (endpointServer.name.startsWith("!"))
                     continue
@@ -73,24 +75,25 @@ class ProxyConnect(val proxyConfig: ProxyConfig) : ApplicationListener<Applicati
                     proxy.ip, proxy.port, proxy.protocol, "", "",
                     endpointServer, ProxyChannelResponseData()
                 )
-                connect(proxyChannelData, workerGroup)
+                connect(proxyChannelData, true)
+                connect(proxyChannelData, false)
             }
         }
         logger.info("Completed ProxyConnect Task")
     }
 
-    private fun connect(proxyChannelData : ProxyChannelData, workerGroup : NioEventLoopGroup) {
+    fun connect(proxyChannelData : ProxyChannelData, autoRead : Boolean) {
         val endpoint = proxyChannelData.endpointServer
 
         Bootstrap().group(workerGroup)
             .channel(NioSocketChannel::class.java)
             .resolver(NoopAddressResolverGroup.INSTANCE)
-            .option(ChannelOption.AUTO_READ, false)
+            .option(ChannelOption.AUTO_READ, autoRead)
             .option(ChannelOption.TCP_NODELAY, true)
-            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, proxyConfig.timeout)
+            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, config.timeout)
             .handler(ProxyChannelInitializer(proxyChannelData))
             .connect(InetSocketAddress(endpoint.ip, endpoint.port))
-            .channel().closeFuture().awaitUninterruptibly(proxyConfig.connectAwait)
+            .channel().closeFuture().awaitUninterruptibly(config.connectAwait)
     }
 
 }

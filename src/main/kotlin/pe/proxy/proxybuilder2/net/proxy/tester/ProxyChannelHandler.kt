@@ -8,6 +8,7 @@ import io.netty.channel.SimpleChannelInboundHandler
 import io.netty.handler.timeout.IdleState
 import io.netty.handler.timeout.IdleStateEvent
 import org.slf4j.LoggerFactory
+import pe.proxy.proxybuilder2.monitor.EndpointMonitor
 
 /**
  * ProxyChannelHandler
@@ -21,7 +22,11 @@ class ProxyChannelHandler(private val encoderDecoder : ProxyChannelEncoderDecode
     private val logger = LoggerFactory.getLogger(ProxyChannelHandler::class.java)
 
     override fun channelUnregistered(ctx : ChannelHandlerContext) { //Finished
-        ProxyConnect.testedProxies.offer(encoderDecoder.proxy)
+        if(encoderDecoder.proxy.ip == "0.0.0.0") {
+            EndpointMonitor.connected.set(encoderDecoder.proxy.response.cleanSocket == true)
+        } else {
+            ProxyConnect.testedProxies.offer(encoderDecoder.proxy)
+        }
         super.channelUnregistered(ctx)
     }
 

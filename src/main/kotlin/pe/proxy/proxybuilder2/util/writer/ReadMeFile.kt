@@ -18,18 +18,18 @@ class ReadMeFile(private val config : ProxyConfig) {
         val readmeText = readmeFile.readText()
 
         val originalText = readmeText.substring(0, readmeText.indexOf("# [SAMPLE PROXIES]"))
-        var extraText = "# [SAMPLE PROXIES] - ${SimpleDateFormat("[MMMM dd yyyy | hh:mm:ss]").format(Date())}\n\n"
+        var extraText =
+            "# [SAMPLE PROXIES] - ${SimpleDateFormat("[MMMM dd yyyy | hh:mm:ss]").format(Date())}\n\n"
 
-        /*  val socks5 = proxies.flatMap { prox ->
-              prox.protocols
-                  ?.map { proto -> prox to proto }
-                  ?.filter { it.second.type == "socks4" }!!
-          }.map { it.first }*/
+        val http = proxies.filter { it.protocols?.any { it1 -> it1.type == "http" } == true }
+            .map { it.ip + ":" + it.port }
+        val https = proxies.filter { it.protocols?.any { it1 -> it1.type == "https" } == true }
+            .map { it.ip + ":" + it.port }
+        val socks4 = proxies.filter { it.protocols?.any { it1 -> it1.type == "socks4" } == true }
+            .map { it.ip + ":" + it.port }
+        val socks5 = proxies.filter { it.protocols?.any { it1 -> it1.type == "socks5" } == true }
+            .map { it.ip + ":" + it.port }
 
-        val http = proxies.filter { it.protocols!!.any { it1 -> it1.type == "http" } }.map { it.ip + ":" + it.port }
-        val https = proxies.filter { it.protocols!!.any { it1 -> it1.type == "https" } }.map { it.ip + ":" + it.port }
-        val socks4 = proxies.filter { it.protocols!!.any { it1 -> it1.type == "socks4" } }.map { it.ip + ":" + it.port }
-        val socks5 = proxies.filter { it.protocols!!.any { it1 -> it1.type == "socks5" } }.map { it.ip + ":" + it.port }
         val archive = entityArchive.map { it.ip + ":" + it.port }
         val uniqueSize = proxies.distinctBy { it.ip }.size
 

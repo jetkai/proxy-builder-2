@@ -58,37 +58,23 @@ class CustomFileWriter(
     @Throws
     fun write(proxies : List<EntityForPublicView>, viewType: ViewType, extension : FileExtension) {
 
-        if(extension == FileExtension.CSV) {
-            val csvEntity = mutableListOf<EntityForPublicViewForCSV>()
-            val schema = CsvSchema.builder()
-                .addColumn("ip")
-                .addColumn("port")
-                .addColumn("protocols")
-                .addColumn("provider")
-                .addColumn("organisation")
-                .addColumn("country")
-                .addColumn("isocode")
-                .addColumn("latitude")
-                .addColumn("longitude")
-                .addColumn("continent")
-                .addColumn("asn")
-                .addColumn("last_tested")
-                .addColumn("proxy")
-                .addColumn("risk")
-                .addColumn("uptime")
-                .build()
-
-            val csvWriter = CsvMapper().writer(schema)
-           // csvWriter.writeValue(//TODO)
-        }
+        //val file = File("${config.outputPath}/test.${extension.name.lowercase()}")
+        val file = File("test.${extension.name.lowercase()}")
 
         val mapper = mapper(extension)
             ?.setSerializationInclusion(JsonInclude.Include.NON_NULL)
             ?.enable(SerializationFeature.INDENT_OUTPUT)
             ?: return logger.error("Unable to read mapper extension type")
 
-        val testFile = "${config.outputPath}/test.${extension.name.lowercase()}"
-        mapper.writeValue(File(testFile), proxies)
+        if(extension == FileExtension.CSV && mapper is CsvMapper) {
+            val entity = EntityForPublicViewForCSV().convert(proxies)
+            val schema : CsvSchema = mapper.schemaFor(EntityForPublicViewForCSV::class.java)
+                .withHeader().sortedBy(* EntityForPublicViewForCSV().order())
+            mapper.writerFor(List::class.java).with(schema).writeValue(file, entity)
+            return
+        }
+
+        mapper.writeValue(file, proxies)
 
     }
     @Throws

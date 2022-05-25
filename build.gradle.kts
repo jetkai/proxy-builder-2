@@ -57,6 +57,9 @@ dependencies {
     //Spring Web - Minor API for checking if Application is running
     implementation("org.springframework.boot:spring-boot-starter-web")
 
+    //Twillo Text API (Sending alerts if detects one of the endpoint servers are down)
+    implementation("com.twilio.sdk:twilio:8.30.1")
+
 
     //WebFlux & Reactor - Minor API for checking if Application is running
     //implementation("org.springframework.boot:spring-boot-starter-webflux")
