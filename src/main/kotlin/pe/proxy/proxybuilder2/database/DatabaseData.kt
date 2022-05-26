@@ -58,7 +58,11 @@ data class EntityForPublicView(
         entity.protocols = KotlinDeserializer.decode<ProtocolData?>(proxy.protocols!!)?.protocol
         entity.connections = KotlinDeserializer.decode(proxy.connections)
         entity.detection = KotlinDeserializer.decode(proxy.detection)
-        entity.provider = KotlinDeserializer.decode(proxy.provider)
+        entity.provider = try {
+            KotlinDeserializer.decode(proxy.provider)
+        } catch (e : Exception) {
+            OperatorData(proxy.provider)
+        }
         entity.location = KotlinDeserializer.decode(proxy.location)
         entity.dateAdded = proxy.dateAdded.toString()
         entity.lastSuccess = proxy.lastSuccess.toString()

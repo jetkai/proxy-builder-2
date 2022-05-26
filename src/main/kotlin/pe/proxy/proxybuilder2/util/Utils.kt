@@ -112,8 +112,8 @@ object Utils {
     fun serialize(json : String) : List<*> {
         val entries = deserialize(json)
 
-        //DO NOT CHANGE THE ORDER -> PoliciesData() has to be index0
-        val clazzes = listOf(PoliciesData(), OperatorData(), LocationData(), RiskData())
+        //DO NOT CHANGE THE ORDER -> PoliciesData() has to be last in index
+        val clazzes = listOf(LocationData(), RiskData(), OperatorData(), PoliciesData())
 
         for(clazz in clazzes) run {
             clazz::class.memberProperties.filterIsInstance<KMutableProperty<*>>()

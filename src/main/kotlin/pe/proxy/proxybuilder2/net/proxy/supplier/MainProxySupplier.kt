@@ -37,8 +37,6 @@ class MainProxySupplier(override val data : FinalProxyListData, appConfig: Proxy
     }
 
     override fun parse() {
-        if(unparsed == null)
-            return logger.error("Unable to read unparsed body data from supplier")
 
         val data = Json { this.encodeDefaults = true; this.ignoreUnknownKeys = true }
         val parsed = data.decodeFromString<SupplierProxyListData>(unparsed!!)

@@ -41,7 +41,7 @@ class ProxyChannelEncoderDecoder(val proxy : ProxyChannelData) {
                     break
 
                 if (values.size - 1 == index)
-                    proxy.response.cleanSocket = true
+                    proxy.response.tls = true
             }
         }
 
@@ -50,10 +50,14 @@ class ProxyChannelEncoderDecoder(val proxy : ProxyChannelData) {
         //Check if data is readable & ips match, update database entry if proxy is working
         if(readable) {
             if (Utils.ipMatch(proxy.ip, remoteIp)) {
-                proxy.response.readable = true
-                proxy.response.remoteIp = remoteIp
-                proxy.response.connected = true
-                proxy.response.endTime = Utils.timestampNow()
+                val response = proxy.response
+                response.readable = true
+                response.remoteIp = remoteIp
+                response.connected = true
+                val autoReadList = mutableListOf<Boolean>()
+                autoReadList.add(proxy.autoRead)
+                response.autoRead = autoReadList
+                response.endTime = Utils.timestampNow()
             } else {
                 logger.warn("Proxy ip does not match ${proxy.ip} -> $remoteIp")
             }

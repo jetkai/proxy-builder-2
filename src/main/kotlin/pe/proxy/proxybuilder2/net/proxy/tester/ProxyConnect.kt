@@ -11,7 +11,6 @@ import org.springframework.context.ApplicationListener
 import org.springframework.stereotype.Component
 import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyDataType
 import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyListData
-import pe.proxy.proxybuilder2.net.proxy.supplier.CustomProxySupplier
 import pe.proxy.proxybuilder2.net.proxy.supplier.MainProxySupplier
 import pe.proxy.proxybuilder2.util.ProxyConfig
 import pe.proxy.proxybuilder2.util.Utils
@@ -49,49 +48,67 @@ class ProxyConnect(val config : ProxyConfig) : ApplicationListener<ApplicationRe
         val supplierProxyListData = FinalProxyListData(mutableListOf())
         val proxySupplier = MainProxySupplier(supplierProxyListData, config)
 
-        proxySupplier
-            .request()  //Requests proxies from the web
-            .parse()    //Attempt to parse the proxies from the web
+        try {
+            proxySupplier
+                .request()  //Requests proxies from the web
+                .parse()    //Attempt to parse the proxies from the web
+        } catch (e : Exception) { //Attempt to re-run again after 30 seconds if error is captured
+            logger.error(e.localizedMessage)
+            Thread.sleep(30000L)
+            initialize()
+        } catch (t : Throwable) { //Attempt to re-run again after 30 seconds if error is captured
+            logger.error(t.localizedMessage)
+            Thread.sleep(30000L)
+            initialize()
+        }
 
         val proxies =
             //Utils.sortByIp(
             Utils.removeBadIps(proxySupplier.data.proxies
                 //.filter { it.protocol == "socks5" }.toMutableList()
                 // )
-            ).shuffled()
+            ).distinctBy { listOf(it.ip, it.port, it.protocol) }
 
         logger.info("Loaded ${proxies.size}")
 
-        loop(proxies)
+        if(proxies.isNotEmpty())
+            prepare(proxies)
     }
 
-    fun loop(proxies : List<FinalProxyDataType>) {
-        for (proxy in proxies) {
+    //Shuffle proxies & allocate the endpoint server for it to connect to
+    //We want to shuffle them as some proxies only allow one open connection
+    //Also try with both Auto Read disabled & enabled
+    fun prepare(proxies : List<FinalProxyDataType>) {
+        val proxyDataList = mutableListOf<ProxyChannelData>()
+
+        for(proxy in proxies) {
             val endpointServers = config.endpointServers
             for (endpointServer in endpointServers) {
-                if (endpointServer.name.startsWith("!"))
+                if(endpointServer.name.startsWith("!"))
                     continue
-                val proxyChannelData = ProxyChannelData(
-                    proxy.ip, proxy.port, proxy.protocol, "", "",
-                    endpointServer, ProxyChannelResponseData()
-                )
-                connect(proxyChannelData, true)
-                connect(proxyChannelData, false)
+                proxyDataList.add(ProxyChannelData(proxy.ip, proxy.port, proxy.protocol, "", "",
+                    false, endpointServer, ProxyChannelResponseData()))
+                proxyDataList.add(ProxyChannelData(proxy.ip, proxy.port, proxy.protocol, "", "",
+                    false, endpointServer, ProxyChannelResponseData()))
             }
         }
+
+        for (proxyData in proxyDataList.shuffled())
+            connect(proxyData)
+
         logger.info("Completed ProxyConnect Task")
     }
 
-    fun connect(proxyChannelData : ProxyChannelData, autoRead : Boolean) {
-        val endpoint = proxyChannelData.endpointServer
+    fun connect(proxyData : ProxyChannelData) {
+        val endpoint = proxyData.endpointServer ?: return
 
         Bootstrap().group(workerGroup)
             .channel(NioSocketChannel::class.java)
             .resolver(NoopAddressResolverGroup.INSTANCE)
-            .option(ChannelOption.AUTO_READ, autoRead)
+            .option(ChannelOption.AUTO_READ, proxyData.autoRead)
             .option(ChannelOption.TCP_NODELAY, true)
             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, config.timeout)
-            .handler(ProxyChannelInitializer(proxyChannelData))
+            .handler(ProxyChannelInitializer(proxyData))
             .connect(InetSocketAddress(endpoint.ip, endpoint.port))
             .channel().closeFuture().awaitUninterruptibly(config.connectAwait)
     }

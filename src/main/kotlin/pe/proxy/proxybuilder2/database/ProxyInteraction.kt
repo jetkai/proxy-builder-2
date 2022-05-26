@@ -70,7 +70,7 @@ class ProxyInteraction(private val repository : ProxyRepository) {
 
     //Might be very heavy on resources, will test - May be better to update as a single entity
     fun getProxyEntities(proxies : ConcurrentLinkedQueue<ProxyChannelData>) : List<EntityChannelData> {
-        val copyOfProxies = proxies.toMutableList() //Otherwise we are out of sync when comparing
+        val copyOfProxies = proxies.distinctBy { it.ip }.toMutableList() //Otherwise we are out of sync when comparing
         val proxyEntityList = mutableListOf<EntityChannelData>()
         try {
             val listIps = copyOfProxies.map { it.ip }.distinct()
@@ -80,29 +80,24 @@ class ProxyInteraction(private val repository : ProxyRepository) {
             copyOfProxies.flatMap { prox ->
                 repositoryList
                     .map { repo -> prox to repo }
-                    .filter { it.second.id != 0 && it.second.ip == it.first.ip }
-                    .distinctBy { it.second.ip }
-            }
+                    .filter { it.second.id != 0 && it.second.ip == it.first.ip } }
                 .mapTo(proxyEntityList) { EntityChannelData(it.second, it.first) }
 
             //New Proxies (that do not exist within database)
-            copyOfProxies.filter {
-                it.ip !in repositoryList
-                    .map { repo -> repo.ip }
-            }
-               // .filter { it.response.connected == true } //Only add proxies that have successfully connected
-                .distinctBy { it.ip } //Removes any duplicated ips
+            copyOfProxies.filter { it.ip !in repositoryList.map { repo -> repo.ip } }
+                 .filter { it.response.connected == true } //Only add proxies that have successfully connected
+                // .distinctBy { it.ip } //Removes any duplicated ips
                 .mapTo(proxyEntityList) { EntityChannelData(getDefaultTemplate(it.ip, it.port), it) }
 
             //Keep this as proxies.removeIf and not proxiesCopy, so we can remove the ones we have added to DB
-            proxies.removeIf { it.ip in repositoryList.map { repo -> repo.ip } }
+           // proxies.removeIf { it.ip in repositoryList.map { repo -> repo.ip } }
+            proxies.removeIf { it in proxyEntityList.map { repo -> repo.proxy } }
         } catch (e : Exception) {
             e.printStackTrace()
         } catch (t : Throwable) {
             t.printStackTrace()
         }
-
-        return proxyEntityList.distinctBy { it.entity.ip }
+        return proxyEntityList
     }
 
     private fun connections(entity : ProxyEntity, proxy : ProxyChannelData) : String {
@@ -113,7 +108,7 @@ class ProxyInteraction(private val repository : ProxyRepository) {
 
         var endpointData : EndpointServerData ?= null
 
-        when (proxy.endpointServer.name) { //Use Reflection in future
+        when (proxy.endpointServer?.name) { //Use Reflection in future
             "ovh_FR" -> { endpointData = connectData.ovh_FR }
             "aws_NA" -> { endpointData = connectData.aws_NA }
             "ora_UK" -> { endpointData = connectData.ora_UK }
@@ -141,7 +136,6 @@ class ProxyInteraction(private val repository : ProxyRepository) {
             val endTime = proxy.response.endTime
             if(startTime != null && endTime != null)
                 endpointData.ping = (endTime.time - startTime.time)
-            endpointData.cleanSocket = proxy.response.cleanSocket == true
         }
 
         return KotlinSerializer.encode(connectData)
@@ -156,7 +150,9 @@ class ProxyInteraction(private val repository : ProxyRepository) {
     }
 
     private fun protocols(entity : ProxyEntity, proxy : ProxyChannelData) : String {
-        val defaultData = mutableListOf(ProtocolDataType(proxy.type, proxy.port))
+        val defaultData = mutableListOf(
+            ProtocolDataType(proxy.type, proxy.port, proxy.response.tls, proxy.response.autoRead)
+        )
         var protocolData = ProtocolData(defaultData)
         try {
             val protocolsJson = entity.protocols
@@ -166,7 +162,7 @@ class ProxyInteraction(private val repository : ProxyRepository) {
             val protocol = protocolData.protocol
             val protocolIsNotInList = protocol.none { it.port == proxy.port && it.type == proxy.type }
             if (protocolIsNotInList)
-                protocol.add(ProtocolDataType(proxy.type, proxy.port))
+                protocol.add(ProtocolDataType(proxy.type, proxy.port, proxy.response.tls, proxy.response.autoRead))
         } catch (e : Exception) {
             e.printStackTrace()
         } catch (t : Throwable) {

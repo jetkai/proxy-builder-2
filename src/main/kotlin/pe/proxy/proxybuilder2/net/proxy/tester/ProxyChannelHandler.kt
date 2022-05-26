@@ -21,10 +21,12 @@ class ProxyChannelHandler(private val encoderDecoder : ProxyChannelEncoderDecode
 
     private val logger = LoggerFactory.getLogger(ProxyChannelHandler::class.java)
 
+    private var existingConnection = false
+
     override fun channelUnregistered(ctx : ChannelHandlerContext) { //Finished
         if(encoderDecoder.proxy.ip == "0.0.0.0") {
-            EndpointMonitor.connected.set(encoderDecoder.proxy.response.cleanSocket == true)
-        } else {
+            EndpointMonitor.connected.set(encoderDecoder.proxy.response.tls == true)
+        } else if(!existingConnection) {
             ProxyConnect.testedProxies.offer(encoderDecoder.proxy)
         }
         super.channelUnregistered(ctx)
@@ -61,6 +63,10 @@ class ProxyChannelHandler(private val encoderDecoder : ProxyChannelEncoderDecode
 
     @Deprecated("TODO -> This will be deprecated in a future Netty build")
     override fun exceptionCaught(ctx : ChannelHandlerContext, cause : Throwable) {
+        val messages = listOf("Too many open connections")
+        if(messages.contains(cause.localizedMessage))
+            existingConnection = true
+
         flushAndClose(ctx)
         logger.warn(cause.localizedMessage)
     }

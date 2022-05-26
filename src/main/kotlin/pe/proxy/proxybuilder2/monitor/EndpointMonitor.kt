@@ -84,7 +84,7 @@ class EndpointMonitor(val config : ProxyConfig) : ApplicationListener<Applicatio
                 .handler(object : ChannelInitializer<SocketChannel>() {
                     override fun initChannel(channel: SocketChannel) {
                         val direct = ProxyChannelData(
-                            "0.0.0.0", 80, "", "", "",
+                            "0.0.0.0", 80, "", "", "", true,
                             endpoint, ProxyChannelResponseData()
                         )
                         val encoderDecoder = ProxyChannelEncoderDecoder(direct)

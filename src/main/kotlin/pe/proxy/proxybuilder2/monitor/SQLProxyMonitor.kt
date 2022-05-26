@@ -37,19 +37,15 @@ class SQLProxyMonitor(val repository : ProxyRepository, val config : ProxyConfig
             executor.scheduleAtFixedRate( { initialize() }, 15, 15, TimeUnit.SECONDS )
     }
 
-    fun initialize() {
-        try {
-        logger.info("Monitor task - tick message0")
-        if(ready.get()) {
+    fun initialize() = try {
+        if (ready.get())
             filter()
-            logger.info("Monitor task - completed")
-        }
-        logger.info("Monitor task - tick message1")
-        } catch (e : Exception) {
-            e.printStackTrace()
-        } catch (t : Throwable) {
-            t.printStackTrace()
-        }
+        else
+            logger.info("Task is not ready")
+    } catch (e : Exception) {
+        logger.error(e.localizedMessage)
+    } catch (t : Throwable) {
+        logger.error(t.localizedMessage)
     }
 
     //Filters the proxies into a list then calls the "write(proxy)" function

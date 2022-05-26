@@ -39,9 +39,9 @@ data class PerformanceConnectData(val ovh_FR : EndpointServerData?=null, val aws
 
 @Serializable
 data class EndpointServerData(var ping : Long?=null, val connections : ConnectionAttempts?=null,
-                              var uptime : String?=null, var cleanSocket : Boolean?=null) {
+                              var uptime : String?=null) {
     fun default(): EndpointServerData =
-        EndpointServerData(0, ConnectionAttempts(0, 0), "0%", false)
+        EndpointServerData(0, ConnectionAttempts(0, 0), "0%")
 }
 
 @Serializable
@@ -51,7 +51,8 @@ data class ConnectionAttempts(var success : Int, var fail : Int)
 data class ProtocolData(var protocol : MutableList<ProtocolDataType>)
 
 @Serializable
-data class ProtocolDataType(var type : String, var port : Int)
+data class ProtocolDataType(var type : String, var port : Int,
+                            var tls : Boolean?=false, val autoRead : MutableList<Boolean>?=null)
 
 @Serializable
 data class ProxyCredentials(var username : String, var password : String) {

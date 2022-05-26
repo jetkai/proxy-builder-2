@@ -52,14 +52,21 @@ class CustomFileWriter(
         //Temp deserializer (for testing) - this is currently hybrid with KTX & Jackson - Bad
         //Jackson doesn't parse KTX string decode properly, not sure how to parse KTX JsonElement to Jackson ATM
         repo.mapTo(proxies) { EntityForPublicView().advanced(it) }
-        write(proxies, ViewType.ADVANCED, FileExtension.CSV)
+        write(proxies, ViewType.ADVANCED, FileExtension.TXT)
     }
 
     @Throws
     fun write(proxies : List<EntityForPublicView>, viewType: ViewType, extension : FileExtension) {
-
         //val file = File("${config.outputPath}/test.${extension.name.lowercase()}")
         val file = File("test.${extension.name.lowercase()}")
+        if (file.lastModified() >= Utils.timestampMinus(60).time) //Prevent overwriting file within 60 mins
+            return
+
+        if(extension == FileExtension.TXT) {
+            val proxiesAsString = proxies.joinToString(separator = "\n") { "${it.ip}:${it.port}" }
+            file.writeText(proxiesAsString)
+            return
+        }
 
         val mapper = mapper(extension)
             ?.setSerializationInclusion(JsonInclude.Include.NON_NULL)

@@ -42,7 +42,7 @@ class QueryApi(private val proxyRepository : ProxyRepository,
             executor.scheduleAtFixedRate({ initialize() }, 0, 1, TimeUnit.MINUTES)
     }
 
-    fun initialize() {
+    fun initialize() = try {
         logger.info("Querying ProxyCheck API")
 
         val entitiesFromRepository = proxyRepository.findByLocationIsNullAndLastSuccessIsNotNull()
@@ -55,27 +55,34 @@ class QueryApi(private val proxyRepository : ProxyRepository,
                 .timeout(Duration.ofSeconds(5))
                 .build()
 
-            val jsonResponse = client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).get().body()
-            val clazzes = Utils.serialize(jsonResponse)
+            val json = client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).get().body()
+            val clazzes = Utils.serialize(json)
 
             clazzes.forEach { clazz ->
                 when (clazz) {
-                    is LocationData -> entity.location = KotlinSerializer.encode(clazz)
+                    is LocationData -> {
+                        entity.location = KotlinSerializer.encode(clazz)
+                        entity.provider = clazz.provider //Default Provider
+                    }
                     is RiskData -> entity.detection = KotlinSerializer.encode(clazz)
                     is OperatorData -> {
-                        val policiesClazz = clazzes[0]
+                        val policiesClazz = clazzes[clazzes.size - 1]
                         if (policiesClazz is PoliciesData && !policiesClazz.isEmpty())
                             clazz.policies = policiesClazz
                         if (!clazz.isEmpty())
-                            entity.provider = KotlinSerializer.encode(clazz)
+                            entity.provider = KotlinSerializer.encode(clazz) //Overwrite Provider if more info available
                     }
                 }
             }
         }
 
         proxyRepository.saveAll(entities)
-
         logger.info("Query complete - ${entities.size}")
+
+    } catch (e : Exception) {
+        logger.error(e.localizedMessage)
+    } catch (t : Throwable) {
+        logger.error(t.localizedMessage)
     }
 
     fun apiURI(proxyIp : String) : URI {

@@ -46,7 +46,7 @@ class RunningStatus(val repository : ProxyRepository) {
 
         //Temp deserializer (for testing) - this is currently hybrid with KTX & Jackson - Bad
         //Jackson doesn't parse KTX string decode properly, not sure how to parse KTX JsonElement to Jackson ATM
-        repoResults.mapTo(proxies) { EntityForPublicView().advanced(it) }
+        repoResults.mapTo(proxies) { EntityForPublicView().basic(it) }
 
         return ResponseEntity<Any>(proxies, HttpStatus.OK)
     }
