@@ -2,16 +2,14 @@ package pe.proxy.proxybuilder2.database
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import kotlinx.serialization.Serializable
-import pe.proxy.proxybuilder2.net.proxy.data.PerformanceConnectData
-import pe.proxy.proxybuilder2.net.proxy.data.ProtocolData
-import pe.proxy.proxybuilder2.net.proxy.data.ProtocolDataType
-import pe.proxy.proxybuilder2.net.proxy.data.ProxyCredentials
+import pe.proxy.proxybuilder2.net.proxy.data.*
 import pe.proxy.proxybuilder2.net.proxy.proxycheckio.LocationData
 import pe.proxy.proxybuilder2.net.proxy.proxycheckio.OperatorData
 import pe.proxy.proxybuilder2.net.proxy.proxycheckio.RiskData
 import pe.proxy.proxybuilder2.net.proxy.tester.ProxyChannelData
 import pe.proxy.proxybuilder2.util.KotlinDeserializer
 import pe.proxy.proxybuilder2.util.Utils
+import pe.proxy.proxybuilder2.util.writer.CustomFileWriter
 
 /**
  * EntityChannelData
@@ -40,34 +38,49 @@ data class EntityForPublicView(
     @JsonProperty("last_success")
     var lastSuccess: String? = null) {
 
-    fun basic(proxy : ProxyEntity) : EntityForPublicView {
-        val entity = EntityForPublicView()
-        entity.ip = proxy.ip
-        entity.port = proxy.port
-        entity.protocols = KotlinDeserializer.decode<ProtocolData?>(proxy.protocols!!)?.protocol
-        entity.ping = KotlinDeserializer.decode<PerformanceConnectData?>(proxy.connections!!)
-            ?.let { Utils.lowestPing(it) }
+    fun classic(proxy : ProxyEntity) : SupplierProxyListData {
+        val entity = SupplierProxyListData(mutableListOf(), mutableListOf(), mutableListOf(), mutableListOf())
+        if(proxy.protocols?.contains("\"http\"") == true)
+            entity.http.add("${proxy.ip}:${proxy.port}")
+        if(proxy.protocols?.contains("\"https\"") == true)
+            entity.https.add("${proxy.ip}:${proxy.port}")
+        if(proxy.protocols?.contains("\"socks4\"") == true)
+            entity.socks4.add("${proxy.ip}:${proxy.port}")
+        if(proxy.protocols?.contains("\"socks5\"") == true)
+            entity.socks5.add("${proxy.ip}:${proxy.port}")
         return entity
     }
 
+    //Temp deserializer (for testing) - this is currently hybrid with KTX & Jackson - Bad
+    //Jackson doesn't parse KTX string decode properly, not sure how to parse KTX JsonElement to Jackson ATM
+    fun basic(proxy : ProxyEntity) : EntityForPublicView {
+        ip = proxy.ip
+        port = proxy.port
+        protocols = KotlinDeserializer.decode<ProtocolData?>(proxy.protocols!!)?.protocol
+        ping = KotlinDeserializer.decode<PerformanceConnectData?>(proxy.connections!!)
+            ?.let { Utils.lowestPing(it) }
+        return this
+    }
+
+    //Temp deserializer (for testing) - this is currently hybrid with KTX & Jackson - Bad
+    //Jackson doesn't parse KTX string decode properly, not sure how to parse KTX JsonElement to Jackson ATM
     fun advanced(proxy : ProxyEntity) : EntityForPublicView {
-        val entity = EntityForPublicView()
-        entity.ip = proxy.ip
-        entity.port = proxy.port
-        entity.credentials = KotlinDeserializer.decode(proxy.credentials)
-        entity.protocols = KotlinDeserializer.decode<ProtocolData?>(proxy.protocols!!)?.protocol
-        entity.connections = KotlinDeserializer.decode(proxy.connections)
-        entity.detection = KotlinDeserializer.decode(proxy.detection)
-        entity.provider = try {
+        ip = proxy.ip
+        port = proxy.port
+        credentials = KotlinDeserializer.decode(proxy.credentials)
+        protocols = KotlinDeserializer.decode<ProtocolData?>(proxy.protocols!!)?.protocol
+        connections = KotlinDeserializer.decode(proxy.connections)
+        detection = KotlinDeserializer.decode(proxy.detection)
+        provider = try {
             KotlinDeserializer.decode(proxy.provider)
         } catch (e : Exception) {
             OperatorData(proxy.provider)
         }
-        entity.location = KotlinDeserializer.decode(proxy.location)
-        entity.dateAdded = proxy.dateAdded.toString()
-        entity.lastSuccess = proxy.lastSuccess.toString()
-        entity.lastTested = proxy.lastTested.toString()
-        return entity
+        location = KotlinDeserializer.decode(proxy.location)
+        dateAdded = proxy.dateAdded.toString()
+        lastSuccess = proxy.lastSuccess.toString()
+        lastTested = proxy.lastTested.toString()
+        return this
     }
 
 }
@@ -97,6 +110,7 @@ data class EntityForPublicViewForCSV(
     @JsonProperty("last_success")
     var lastSuccess: String? = null) {
 
+    //TODO - Change this, creating extra EntityForPublicViewForCSV() for no reason
     fun convert(entities : List<EntityForPublicView>) : List<EntityForPublicViewForCSV> {
         val entitiesCsv = mutableListOf<EntityForPublicViewForCSV>()
         for(entity in entities) {
@@ -124,12 +138,18 @@ data class EntityForPublicViewForCSV(
         return entitiesCsv
     }
 
-    fun order(): Array<String> {
-        return arrayOf(
-            "ip", "port", "username", "password", "protocols", "ping", "detected",
-            "organisation", "country", "isocode", "latitude", "longitude", "asn",
-            "connections", "uptime", "dateAdded", "lastTested", "lastSuccess"
-        )
+    fun order(viewType : CustomFileWriter.ViewType): Array<String> {
+        return when (viewType) {
+            CustomFileWriter.ViewType.ADVANCED -> {
+                arrayOf(
+                    "ip", "port", "username", "password", "protocols", "ping", "detected",
+                    "organisation", "country", "isocode", "latitude", "longitude", "asn",
+                    "connections", "uptime", "dateAdded", "lastTested", "lastSuccess"
+                )
+            }
+            CustomFileWriter.ViewType.BASIC -> { arrayOf("ip", "port", "protocols", "ping") }
+            else -> { arrayOf("http", "https", "socks4", "socks5") }
+        }
     }
 
 }
