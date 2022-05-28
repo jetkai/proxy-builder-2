@@ -29,7 +29,7 @@ class ProxyInteraction(private val repository : ProxyRepository) {
     fun updateEntity(entity : ProxyEntity, proxy : ProxyChannelData) {
         entity.connections = connections(entity, proxy)
         entity.credentials = credentials(proxy)
-        entity.protocols = protocols(entity, proxy)
+        entity.protocols = protocols(entity, proxy, true)
         time(entity, proxy)
         repository.save(entity) //Writes to DB
     }
@@ -38,11 +38,18 @@ class ProxyInteraction(private val repository : ProxyRepository) {
         val entities = mutableListOf<ProxyEntity>()
         for(data in entityData) {
             try {
+                val protocols = protocols(data.entity, data.proxy, false)
+
                 data.entity.connections = connections(data.entity, data.proxy)
                 data.entity.credentials = credentials(data.proxy)
-                data.entity.protocols = protocols(data.entity, data.proxy)
+                data.entity.protocols = protocols(data.entity, data.proxy, true)
                 time(data.entity, data.proxy)
-                entities.add(data.entity)
+
+                if (data.entity.protocols == protocols || data.proxy.response.connected != false) {
+                    entities.add(data.entity)
+                } else {
+                    //TODO -> New database for proxies that fail to connect, flag dead proxies
+                }
             } catch (e : Exception) {
                 e.printStackTrace()
             } catch (t : Throwable) {
@@ -80,17 +87,16 @@ class ProxyInteraction(private val repository : ProxyRepository) {
             copyOfProxies.flatMap { prox ->
                 repositoryList
                     .map { repo -> prox to repo }
-                    .filter { it.second.id != 0 && it.second.ip == it.first.ip } }
+                    .filter { it.second.id != 0
+                            && it.second.ip == it.first.ip } }
                 .mapTo(proxyEntityList) { EntityChannelData(it.second, it.first) }
 
             //New Proxies (that do not exist within database)
             copyOfProxies.filter { it.ip !in repositoryList.map { repo -> repo.ip } }
-                 .filter { it.response.connected == true } //Only add proxies that have successfully connected
-                // .distinctBy { it.ip } //Removes any duplicated ips
+                .filter { it.response.connected == true } //Only add proxies that have successfully connected
                 .mapTo(proxyEntityList) { EntityChannelData(getDefaultTemplate(it.ip, it.port), it) }
 
             //Keep this as proxies.removeIf and not proxiesCopy, so we can remove the ones we have added to DB
-           // proxies.removeIf { it.ip in repositoryList.map { repo -> repo.ip } }
             proxies.removeIf { it in proxyEntityList.map { repo -> repo.proxy } }
         } catch (e : Exception) {
             e.printStackTrace()
@@ -149,7 +155,7 @@ class ProxyInteraction(private val repository : ProxyRepository) {
         return null
     }
 
-    private fun protocols(entity : ProxyEntity, proxy : ProxyChannelData) : String {
+    private fun protocols(entity : ProxyEntity, proxy : ProxyChannelData, append : Boolean) : String {
         val defaultData = mutableListOf(
             ProtocolDataType(proxy.type, proxy.port, proxy.response.tls, proxy.response.autoRead)
         )
@@ -159,10 +165,12 @@ class ProxyInteraction(private val repository : ProxyRepository) {
             if (protocolsJson != null && protocolsJson.isNotEmpty())
                 protocolData = KotlinDeserializer.decode(protocolsJson)!!
 
-            val protocol = protocolData.protocol
-            val protocolIsNotInList = protocol.none { it.port == proxy.port && it.type == proxy.type }
-            if (protocolIsNotInList)
-                protocol.add(ProtocolDataType(proxy.type, proxy.port, proxy.response.tls, proxy.response.autoRead))
+            if(append) {
+                val protocol = protocolData.protocol
+                val protocolIsNotInList = protocol.none { it.port == proxy.port && it.type == proxy.type }
+                if (protocolIsNotInList)
+                    protocol.add(ProtocolDataType(proxy.type, proxy.port, proxy.response.tls, proxy.response.autoRead))
+            }
         } catch (e : Exception) {
             e.printStackTrace()
         } catch (t : Throwable) {

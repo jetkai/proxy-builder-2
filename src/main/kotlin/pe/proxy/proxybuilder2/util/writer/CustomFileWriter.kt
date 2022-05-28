@@ -14,10 +14,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.ApplicationListener
 import org.springframework.stereotype.Component
-import pe.proxy.proxybuilder2.database.EntityForPublicView
-import pe.proxy.proxybuilder2.database.EntityForPublicViewForCSV
-import pe.proxy.proxybuilder2.database.ProxyEntity
-import pe.proxy.proxybuilder2.database.ProxyRepository
+import pe.proxy.proxybuilder2.database.*
 import pe.proxy.proxybuilder2.net.proxy.data.SupplierProxyListData
 import pe.proxy.proxybuilder2.util.ProxyConfig
 import pe.proxy.proxybuilder2.util.Utils
@@ -46,17 +43,22 @@ class CustomFileWriter(val repository: ProxyRepository,
         //val lastOnlineSince = Utils.timestampMinus(30) //Within the past 30 minutes
         //val repo = repository.findByLastSuccessAfter(lastOnlineSince)
         val repo = repository.findByLocationIsNotNullAndLastSuccessIsNotNull()
-        for(viewType in ViewType.values()) {
-            val proxies = convert(repo, viewType)
-            for(fileExtension in FileExtension.values())
-                write(proxies, viewType, fileExtension)
+        for (viewType in ViewType.values()) {
+            if (viewType == ViewType.CLASSIC) {
+                val proxies = convertClassic(repo, viewType)
+                for (fileExtension in FileExtension.values())
+                    write(proxies, viewType, fileExtension)
+            } else {
+                val proxies = convert(repo, viewType)
+                for (fileExtension in FileExtension.values())
+                    write(proxies, viewType, fileExtension)
+            }
         }
     }
 
-    fun convert(repo : List<ProxyEntity>, viewType: ViewType) : MutableList<Any> {
-        val proxies = mutableListOf<Any>()
+    fun convert(repo : List<ProxyEntity>, viewType: ViewType) : MutableList<EntityForPublicView> {
+        val proxies = mutableListOf<EntityForPublicView>()
         when (viewType) {
-            ViewType.CLASSIC -> { repo.mapTo(proxies) { EntityForPublicView().classic(it) } }
             ViewType.BASIC -> { repo.mapTo(proxies) { EntityForPublicView().basic(it) } }
             ViewType.ADVANCED -> { repo.mapTo(proxies) { EntityForPublicView().advanced(it) } }
             else -> {}
@@ -64,17 +66,41 @@ class CustomFileWriter(val repository: ProxyRepository,
         return proxies
     }
 
+    fun convertClassic(repo : List<ProxyEntity>, viewType: ViewType) : SupplierProxyListData {
+        val proxies = SupplierProxyListData(mutableListOf(), mutableListOf(), mutableListOf(), mutableListOf())
+        if (viewType == ViewType.CLASSIC) {
+            repo.forEach { EntityForPublicView().classic(proxies, it) }
+        }
+        return proxies
+    }
+
     @Throws
-    fun write(proxies : List<Any>, viewType: ViewType, extension : FileExtension) {
-        //val file = File("${config.outputPath}/test.${extension.name.lowercase()}")
-        val file = File("test/test-${viewType.name.lowercase()}.${extension.name.lowercase()}")
+    fun write(proxies : List<EntityForPublicView>, viewType: ViewType, extension : FileExtension) {
+        var file = File("${config.outputPath}/online-proxies/${extension.name.lowercase()}" +
+                "/proxies-${viewType.name.lowercase()}.${extension.name.lowercase()}")
         if (file.lastModified() >= Utils.timestampMinus(60).time) //Prevent overwriting file within 60 mins
             return
 
         if(extension == FileExtension.TXT && viewType == ViewType.BASIC) {
-            proxies as List<EntityForPublicView>
-            val proxiesAsString = proxies.joinToString(separator = "\n") { "${it.ip}:${it.port}" }
+            //All Proxies
+            var proxiesAsString = proxies.joinToString(separator = "\n") { "${it.ip}:${it.port}" }
+            file = File("${config.outputPath}/online-proxies/${extension.name.lowercase()}" +
+                    "/proxies.${extension.name.lowercase()}")
             file.writeText(proxiesAsString)
+
+            val protocols = listOf("http", "https", "socks4", "socks5")
+            for(protocolName in protocols) {
+                proxiesAsString = proxies.flatMap { prox ->
+                    prox.protocols
+                        ?.map { repo -> prox to repo }
+                        ?.filter { it.second.type == protocolName }!!
+                }.joinToString(separator = "\n") { "${it.first.ip}:${it.first.port}" }
+                file = File(
+                    "${config.outputPath}/online-proxies/${extension.name.lowercase()}" +
+                            "/proxies-$protocolName.${extension.name.lowercase()}"
+                )
+                file.writeText(proxiesAsString)
+            }
             return
         }
 
@@ -84,21 +110,45 @@ class CustomFileWriter(val repository: ProxyRepository,
             ?: return logger.error("Unable to read mapper extension type")
 
         if(extension == FileExtension.CSV && mapper is CsvMapper) {
-            if (viewType == ViewType.CLASSIC) {
-                proxies as List<SupplierProxyListData>
-                val schema: CsvSchema = mapper.schemaFor(SupplierProxyListData::class.java).withHeader()
-                    .sortedBy(* EntityForPublicViewForCSV().order(viewType))
-                mapper.writerFor(MutableList::class.java).with(schema).writeValue(file, proxies)
-            } else if(viewType == ViewType.ADVANCED) {
-                proxies as List<EntityForPublicView>
-                val entity = EntityForPublicViewForCSV().convert(proxies)
-                val schema: CsvSchema = mapper.schemaFor(EntityForPublicViewForCSV::class.java)
-                    .withHeader().sortedBy(* EntityForPublicViewForCSV().order(viewType))
-                mapper.writerFor(List::class.java).with(schema).writeValue(file, entity)
-                return
-            } else if(viewType == ViewType.BASIC) { //TODO
-                return
+            when (viewType) {
+                ViewType.ADVANCED -> {
+                    val entity = EntityForPublicViewForCSV().convert(proxies)
+                    val schema: CsvSchema = mapper.schemaFor(EntityForPublicViewForCSV::class.java)
+                        .withHeader().sortedBy(* EntityForPublicViewForCSV().order(viewType))
+                    mapper.writerFor(List::class.java).with(schema).writeValue(file, entity)
+                }
+                ViewType.BASIC -> { //TODO
+                }
+                else -> {}
             }
+            return
+        }
+
+        mapper.writeValue(file, proxies)
+    }
+
+    fun write(proxies : SupplierProxyListData, viewType: ViewType, extension : FileExtension) {
+        //val file = File("${config.outputPath}/test.${extension.name.lowercase()}")
+        val file = File("${config.outputPath}/online-proxies/${extension.name.lowercase()}" +
+                "/proxies.${extension.name.lowercase()}")
+        if (file.lastModified() >= Utils.timestampMinus(60).time) //Prevent overwriting file within 60 mins
+            return
+
+        val mapper = mapper(extension)
+            ?.setSerializationInclusion(JsonInclude.Include.NON_NULL)
+            ?.enable(SerializationFeature.INDENT_OUTPUT)
+            ?: return logger.error("Unable to read mapper extension type")
+
+        if(extension == FileExtension.CSV && mapper is CsvMapper) {
+            when (viewType) {
+                ViewType.CLASSIC -> {
+                    val schema: CsvSchema = mapper.schemaFor(SupplierProxyListData::class.java).withHeader()
+                        .sortedBy(* EntityForPublicViewForCSV().order(viewType))
+                    mapper.writerFor(SupplierProxyListData::class.java).with(schema).writeValue(file, proxies)
+                }
+                else -> {}
+            }
+            return
         }
 
         mapper.writeValue(file, proxies)
@@ -117,9 +167,9 @@ class CustomFileWriter(val repository: ProxyRepository,
 
     enum class ViewType(private val id : Int) {
         CLASSIC(0),
-        MODERN(1),
-        BASIC(2),
-        ADVANCED(3);
+        BASIC(1),
+        ADVANCED(2);
+        //   MODERN(3),
 
         open fun getById(id : Int) : ViewType {
             return ViewType.values().firstOrNull { it.id == id } ?: CLASSIC

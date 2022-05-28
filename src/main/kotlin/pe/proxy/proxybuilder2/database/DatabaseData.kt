@@ -38,8 +38,7 @@ data class EntityForPublicView(
     @JsonProperty("last_success")
     var lastSuccess: String? = null) {
 
-    fun classic(proxy : ProxyEntity) : SupplierProxyListData {
-        val entity = SupplierProxyListData(mutableListOf(), mutableListOf(), mutableListOf(), mutableListOf())
+    fun classic(entity : SupplierProxyListData, proxy : ProxyEntity) : SupplierProxyListData {
         if(proxy.protocols?.contains("\"http\"") == true)
             entity.http.add("${proxy.ip}:${proxy.port}")
         if(proxy.protocols?.contains("\"https\"") == true)
