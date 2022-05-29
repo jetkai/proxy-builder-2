@@ -21,6 +21,7 @@ import pe.proxy.proxybuilder2.net.proxy.tester.ProxyChannelEncoderDecoder
 import pe.proxy.proxybuilder2.net.proxy.tester.ProxyChannelHandler
 import pe.proxy.proxybuilder2.net.proxy.tester.ProxyChannelResponseData
 import pe.proxy.proxybuilder2.util.ProxyConfig
+import pe.proxy.proxybuilder2.util.Tasks
 import java.net.InetSocketAddress
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -40,12 +41,17 @@ class EndpointMonitor(val config : ProxyConfig) : ApplicationListener<Applicatio
         val connected = AtomicBoolean(false)
     }
 
+    private val pause = Tasks.thread.endpointMonitor?.pause!!
+
     override fun onApplicationEvent(event: ApplicationReadyEvent) {
         if(config.enabledThreads.endpointMonitor)
             executor.scheduleAtFixedRate( { initialize() }, 0, 1, TimeUnit.HOURS )
     }
 
     fun initialize() {
+        if(pause.get())
+            return logger.info("Thread paused")
+
         for (endpoint in config.endpointServers) {
             if (endpoint.name.startsWith("!"))
                 continue

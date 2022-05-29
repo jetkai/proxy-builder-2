@@ -16,7 +16,7 @@ import javax.persistence.*
  * @version 1.0, 15/05/2022
  */
 @Entity
-@Table(name = "all_proxies", schema = "localdb")
+@Table(name = "all_proxies", schema = "prod")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 class ProxyEntity {
 

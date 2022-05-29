@@ -2,6 +2,7 @@ package pe.proxy.proxybuilder2.util
 
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.JsonToken
+import pe.proxy.proxybuilder2.database.ProxyEntity
 import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyDataType
 import pe.proxy.proxybuilder2.net.proxy.data.PerformanceConnectData
 import pe.proxy.proxybuilder2.net.proxy.proxycheckio.LocationData
@@ -27,7 +28,7 @@ object Utils {
     val IS_WINDOWS = System.getProperty("os.name").startsWith("Windows")
 
     fun removeBadIps(proxies : MutableList<FinalProxyDataType>) : MutableList<FinalProxyDataType> {
-        val pattern = Pattern.compile("^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(\\.(?!$)|$)){4}$")
+        val pattern = Pattern.compile("^((\\d|[1-9]\\d|1\\d\\d|2[0-4]\\d|25[0-5])(\\.(?!$)|$)){4}$")
         proxies.removeIf { !pattern.matcher(it.ip).matches() }
         return proxies
     }
@@ -63,9 +64,9 @@ object Utils {
     private fun replaceBadValues(remoteAddress : String) : String =
         remoteAddress.replace("\n", "").replace("\r", "")
 
-    fun sortByIp(proxyArray : MutableList<FinalProxyDataType>) : List<FinalProxyDataType> {
-        val comparator : Comparator<FinalProxyDataType> = Comparator {
-                ip1, ip2 -> toNumeric(ip1.ip).compareTo(toNumeric(ip2.ip))
+    fun sortByIp(proxyArray : List<ProxyEntity>) : List<ProxyEntity> {
+        val comparator : Comparator<ProxyEntity> = Comparator {
+                ip1, ip2 -> toNumeric(ip1.ip!!).compareTo(toNumeric(ip2.ip!!))
         }
         return proxyArray.sortedWith(comparator)
     }
@@ -103,7 +104,6 @@ object Utils {
         val pingArray = listOf(
             connectionData.aws_NA?.ping!!, connectionData.ms_HK?.ping!!,
             connectionData.ora_JP?.ping!!, connectionData.ora_UK?.ping!!,
-            connectionData.ovh_FR?.ping!!
         )
         return pingArray.filter { it != 0L }.minOf { it }
     }

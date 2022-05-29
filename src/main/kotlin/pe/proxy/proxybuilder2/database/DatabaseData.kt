@@ -1,5 +1,6 @@
 package pe.proxy.proxybuilder2.database
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import kotlinx.serialization.Serializable
 import pe.proxy.proxybuilder2.net.proxy.data.*
@@ -21,23 +22,24 @@ data class EntityChannelData(val entity : ProxyEntity, val proxy : ProxyChannelD
 
 @Serializable
 data class EntityForPublicView(
-    var ip: String? = null,
-    var port: Int? = null,
-    var ping: Long? = null,
-    var uptime: Int? = null,
-    var protocols: List<ProtocolDataType>? = null,
-    var credentials: ProxyCredentials? = null,
-    var connections: PerformanceConnectData? = null,
-    var detection: RiskData? = null,
-    var provider: OperatorData? = null,
-    var location: LocationData? = null,
+    var ip : String? = null,
+    var port : Int? = null,
+    var ping : Long? = null,
+    var uptime : Int? = null,
+    var protocols : List<ProtocolDataType>? = null,
+    var credentials : ProxyCredentials? = null,
+    var endpoints : PerformanceConnectData? = null,
+    var detection : RiskData? = null,
+    var provider : OperatorData? = null,
+    var location : LocationData? = null,
     @JsonProperty("date_added")
-    var dateAdded: String? = null,
+    var dateAdded : String? = null,
     @JsonProperty("last_tested")
-    var lastTested: String? = null,
+    var lastTested : String? = null,
     @JsonProperty("last_success")
-    var lastSuccess: String? = null) {
+    var lastSuccess : String? = null) {
 
+    @JsonIgnore
     fun classic(entity : SupplierProxyListData, proxy : ProxyEntity) : SupplierProxyListData {
         if(proxy.protocols?.contains("\"http\"") == true)
             entity.http.add("${proxy.ip}:${proxy.port}")
@@ -52,23 +54,24 @@ data class EntityForPublicView(
 
     //Temp deserializer (for testing) - this is currently hybrid with KTX & Jackson - Bad
     //Jackson doesn't parse KTX string decode properly, not sure how to parse KTX JsonElement to Jackson ATM
+    @JsonIgnore
     fun basic(proxy : ProxyEntity) : EntityForPublicView {
         ip = proxy.ip
         port = proxy.port
         protocols = KotlinDeserializer.decode<ProtocolData?>(proxy.protocols!!)?.protocol
-        ping = KotlinDeserializer.decode<PerformanceConnectData?>(proxy.connections!!)
-            ?.let { Utils.lowestPing(it) }
+        ping = KotlinDeserializer.decode<PerformanceConnectData?>(proxy.connections!!)?.let { Utils.lowestPing(it) }
         return this
     }
 
     //Temp deserializer (for testing) - this is currently hybrid with KTX & Jackson - Bad
     //Jackson doesn't parse KTX string decode properly, not sure how to parse KTX JsonElement to Jackson ATM
+    @JsonIgnore
     fun advanced(proxy : ProxyEntity) : EntityForPublicView {
         ip = proxy.ip
         port = proxy.port
         credentials = KotlinDeserializer.decode(proxy.credentials)
         protocols = KotlinDeserializer.decode<ProtocolData?>(proxy.protocols!!)?.protocol
-        connections = KotlinDeserializer.decode(proxy.connections)
+        endpoints = KotlinDeserializer.decode(proxy.connections)
         detection = KotlinDeserializer.decode(proxy.detection)
         provider = try {
             KotlinDeserializer.decode(proxy.provider)
@@ -110,6 +113,7 @@ data class EntityForPublicViewForCSV(
     var lastSuccess: String? = null) {
 
     //TODO - Change this, creating extra EntityForPublicViewForCSV() for no reason
+    @JsonIgnore
     fun convert(entities : List<EntityForPublicView>) : List<EntityForPublicViewForCSV> {
         val entitiesCsv = mutableListOf<EntityForPublicViewForCSV>()
         for(entity in entities) {
@@ -127,7 +131,7 @@ data class EntityForPublicViewForCSV(
             entityCsv.latitude = entity.location?.latitude
             entityCsv.longitude = entity.location?.longitude
             entityCsv.asn = entity.location?.asn
-            entityCsv.connections = entity.connections.toString()
+            entityCsv.connections = entity.endpoints.toString()
             entityCsv.uptime = entity.uptime
             entityCsv.dateAdded = entity.dateAdded
             entityCsv.lastTested = entity.lastTested
@@ -137,9 +141,10 @@ data class EntityForPublicViewForCSV(
         return entitiesCsv
     }
 
+    @JsonIgnore
     fun order(viewType : CustomFileWriter.ViewType): Array<String> {
         return when (viewType) {
-            CustomFileWriter.ViewType.ADVANCED -> {
+            CustomFileWriter.ViewType.ADVANCED, CustomFileWriter.ViewType.ARCHIVE -> {
                 arrayOf(
                     "ip", "port", "username", "password", "protocols", "ping", "detected",
                     "organisation", "country", "isocode", "latitude", "longitude", "asn",

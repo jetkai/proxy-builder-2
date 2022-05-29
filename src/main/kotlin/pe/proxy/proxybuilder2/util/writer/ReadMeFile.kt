@@ -3,7 +3,6 @@ package pe.proxy.proxybuilder2.util.writer
 import pe.proxy.proxybuilder2.database.EntityForPublicView
 import pe.proxy.proxybuilder2.database.ProxyEntity
 import pe.proxy.proxybuilder2.util.ProxyConfig
-import pe.proxy.proxybuilder2.util.Utils
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -52,15 +51,15 @@ class ReadMeFile(private val config : ProxyConfig) {
 
         val codeTextArray = arrayListOf(
             arrayListOf("[SOCKS4 (${socks4.size}/$uniqueSize)](${gitHubLinkArray[0]})",
-                Utils.sortByIp2(socks4.take(30)).joinToString(separator = "\n")),
+                socks4.take(30).joinToString(separator = "\n")),
             arrayListOf("[SOCKS5 (${socks5.size}/$uniqueSize)](${gitHubLinkArray[1]})",
-                Utils.sortByIp2(socks5.take(30)).joinToString(separator = "\n")),
+                socks5.take(30).joinToString(separator = "\n")),
             arrayListOf("[HTTP (${http.size}/$uniqueSize)](${gitHubLinkArray[2]})",
-                Utils.sortByIp2(http.take(30)).joinToString(separator = "\n")),
+                http.take(30).joinToString(separator = "\n")),
             arrayListOf("[HTTPS (${https.size}/$uniqueSize)](${gitHubLinkArray[3]})",
-                Utils.sortByIp2(https.take(30)).joinToString(separator = "\n")),
+                https.take(30).joinToString(separator = "\n")),
             arrayListOf("[ARCHIVE ($uniqueSize/${archive.size})](${gitHubLinkArray[4]})",
-                Utils.sortByIp2(archive.take(30)).joinToString(separator = "\n"))
+                archive.take(30).joinToString(separator = "\n"))
         )
 
         for(codeText in codeTextArray) {

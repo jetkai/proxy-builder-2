@@ -51,9 +51,9 @@ class ProxyInteraction(private val repository : ProxyRepository) {
                     //TODO -> New database for proxies that fail to connect, flag dead proxies
                 }
             } catch (e : Exception) {
-                e.printStackTrace()
+                logger.error(e.localizedMessage)
             } catch (t : Throwable) {
-                t.printStackTrace()
+                logger.error(t.localizedMessage)
             }
         }
         repository.saveAll(entities)
@@ -97,11 +97,14 @@ class ProxyInteraction(private val repository : ProxyRepository) {
                 .mapTo(proxyEntityList) { EntityChannelData(getDefaultTemplate(it.ip, it.port), it) }
 
             //Keep this as proxies.removeIf and not proxiesCopy, so we can remove the ones we have added to DB
-            proxies.removeIf { it in proxyEntityList.map { repo -> repo.proxy } }
+            logger.info("TESTING SIZE0: ${proxies.size}")
+            proxies.removeAll(copyOfProxies.toSet())
+            logger.info("TESTING SIZE1: ${proxies.size}")
+           // proxies.removeIf { it in proxyEntityList.map { repo -> repo.proxy } }
         } catch (e : Exception) {
-            e.printStackTrace()
+            logger.error(e.localizedMessage)
         } catch (t : Throwable) {
-            t.printStackTrace()
+            logger.error(t.localizedMessage)
         }
         return proxyEntityList
     }
@@ -115,7 +118,6 @@ class ProxyInteraction(private val repository : ProxyRepository) {
         var endpointData : EndpointServerData ?= null
 
         when (proxy.endpointServer?.name) { //Use Reflection in future
-            "ovh_FR" -> { endpointData = connectData.ovh_FR }
             "aws_NA" -> { endpointData = connectData.aws_NA }
             "ora_UK" -> { endpointData = connectData.ora_UK }
             "ora_JP" -> { endpointData = connectData.ora_JP }
@@ -172,9 +174,9 @@ class ProxyInteraction(private val repository : ProxyRepository) {
                     protocol.add(ProtocolDataType(proxy.type, proxy.port, proxy.response.tls, proxy.response.autoRead))
             }
         } catch (e : Exception) {
-            e.printStackTrace()
+            logger.error(e.localizedMessage)
         } catch (t : Throwable) {
-            t.printStackTrace()
+            logger.error(t.localizedMessage)
         }
 
         return KotlinSerializer.encode(protocolData)

@@ -9,10 +9,13 @@ import org.slf4j.LoggerFactory
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.ApplicationListener
 import org.springframework.stereotype.Component
+import pe.proxy.proxybuilder2.monitor.ChecksPerSecond
 import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyDataType
 import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyListData
+import pe.proxy.proxybuilder2.net.proxy.supplier.LocalProxySupplier
 import pe.proxy.proxybuilder2.net.proxy.supplier.MainProxySupplier
 import pe.proxy.proxybuilder2.util.ProxyConfig
+import pe.proxy.proxybuilder2.util.Tasks
 import pe.proxy.proxybuilder2.util.Utils
 import java.net.InetSocketAddress
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -39,14 +42,21 @@ class ProxyConnect(val config : ProxyConfig) : ApplicationListener<ApplicationRe
         val testedProxies = ConcurrentLinkedQueue<ProxyChannelData>()
     }
 
+    private val running = Tasks.thread.proxyConnect?.running!!
+    private val pause = Tasks.thread.proxyConnect?.pause!!
+
     override fun onApplicationEvent(event : ApplicationReadyEvent) {
-        if(config.enabledThreads.proxyConnect)
-            executor.scheduleAtFixedRate({ initialize() }, 0, 90, TimeUnit.MINUTES)
+        if(config.enabledThreads.proxyConnect && !running.get())
+            executor.scheduleAtFixedRate({ initialize() }, 0, 60, TimeUnit.MINUTES)
     }
 
     private fun initialize() {
+        running.set(true)
+
         val supplierProxyListData = FinalProxyListData(mutableListOf())
         val proxySupplier = MainProxySupplier(supplierProxyListData, config)
+        //Force load local proxies from proxies/*
+        LocalProxySupplier(supplierProxyListData, config).request().parse()
 
         try {
             proxySupplier
@@ -64,7 +74,7 @@ class ProxyConnect(val config : ProxyConfig) : ApplicationListener<ApplicationRe
 
         val proxies =
             //Utils.sortByIp(
-            Utils.removeBadIps(proxySupplier.data.proxies
+            Utils.removeBadIps(supplierProxyListData.proxies
                 //.filter { it.protocol == "socks5" }.toMutableList()
                 // )
             ).distinctBy { listOf(it.ip, it.port, it.protocol) }
@@ -93,14 +103,21 @@ class ProxyConnect(val config : ProxyConfig) : ApplicationListener<ApplicationRe
             }
         }
 
-        for (proxyData in proxyDataList.shuffled())
+        val listSize = proxyDataList.size
+        proxyDataList.shuffled().forEachIndexed { index, proxyData ->
+            when { //Every 100 proxies, update the checks per second thread
+                index % 100 == 0 -> { ChecksPerSecond.currentIndex = index; ChecksPerSecond.proxyListSize = listSize }
+            }
             connect(proxyData)
+        }
 
+        running.set(false)
         logger.info("Completed ProxyConnect Task")
     }
 
     fun connect(proxyData : ProxyChannelData) {
         val endpoint = proxyData.endpointServer ?: return
+        val awaitTime = (if(pause.get()) 30000 else config.connectAwait)
 
         Bootstrap().group(workerGroup)
             .channel(NioSocketChannel::class.java)
@@ -110,7 +127,7 @@ class ProxyConnect(val config : ProxyConfig) : ApplicationListener<ApplicationRe
             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, config.timeout)
             .handler(ProxyChannelInitializer(proxyData))
             .connect(InetSocketAddress(endpoint.ip, endpoint.port))
-            .channel().closeFuture().awaitUninterruptibly(config.connectAwait)
+            .channel().closeFuture().awaitUninterruptibly(awaitTime)
     }
 
 }

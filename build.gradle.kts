@@ -48,6 +48,9 @@ dependencies {
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.13.3")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformats-text:2.13.3")
 
+    //Apache CSV
+    implementation("org.apache.commons:commons-csv:1.9.0")
+
     //Netty4 - Connecting to Endpoint Test Server, Testing the Proxy
     implementation("io.netty:netty-all:4.1.77.Final")
 

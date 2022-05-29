@@ -1,6 +1,18 @@
 package pe.proxy.proxybuilder2.git
 
 import org.slf4j.LoggerFactory
+import org.springframework.boot.context.event.ApplicationReadyEvent
+import org.springframework.context.ApplicationListener
+import org.springframework.stereotype.Component
+import pe.proxy.proxybuilder2.database.ProxyRepository
+import pe.proxy.proxybuilder2.util.ProxyConfig
+import pe.proxy.proxybuilder2.util.Tasks
+import pe.proxy.proxybuilder2.util.writer.CustomFileWriter
+import java.text.SimpleDateFormat
+import java.util.*
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 
 /**
  * GitActions
@@ -8,13 +20,26 @@ import org.slf4j.LoggerFactory
  * @author Kai
  * @version 1.0, 19/05/2022
  */
-class GitActions {
+@Component
+class GitActions(private val repository: ProxyRepository,
+                 private val config : ProxyConfig) : ApplicationListener<ApplicationReadyEvent> {
 
     private val logger = LoggerFactory.getLogger(GitActions::class.java)
 
-    private val shell = Shell()
+    private val shell = Shell(config)
 
-    fun init() {
+    private val executor : ScheduledExecutorService = Executors.newScheduledThreadPool(1)
+
+    override fun onApplicationEvent(event : ApplicationReadyEvent) {
+        executor.scheduleAtFixedRate({ initialize() },15,90, TimeUnit.MINUTES)
+    }
+
+    fun initialize() {
+        Tasks.thread.gitActions?.let { Tasks.thread.pauseAllExcept(it) }
+        //Heavy task, requesting other threads to pause until this task has been completed
+        CustomFileWriter(repository, config).initialize()
+
+        Tasks.thread.resumeAll()
 
         GitStage.values()
             .asSequence()
@@ -26,6 +51,9 @@ class GitActions {
     }
 
     private fun nextAction(stage : GitStage) {
+        if(stage == GitStage.COMMITTING)
+            stage.command += "Updated-${ SimpleDateFormat("dd/MM/yyyy-HH:mm:ss").format(Date()) }"
+
         shell.parseCommand(stage.command)
         logger.info(stage.name)
     }

@@ -1,8 +1,6 @@
 package pe.proxy.proxybuilder2.git
 
 import com.sun.istack.logging.Logger
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.stereotype.Component
 import pe.proxy.proxybuilder2.util.ProxyConfig
 import pe.proxy.proxybuilder2.util.Utils
 
@@ -12,17 +10,13 @@ import pe.proxy.proxybuilder2.util.Utils
  * @author Kai
  * @version 1.0, 19/05/2022
  */
-@Component
-class Shell {
+class Shell(val config : ProxyConfig) {
 
     private val logger = Logger.getLogger(Shell::class.java)
 
-    @Autowired
-    final lateinit var appConfig : ProxyConfig
-
     fun parseCommand(gitArguments : Array<String>) {
 
-        val directory = arrayOf("cd \"${appConfig.outputPath}\" && ")
+        val directory = arrayOf("cd \"${config.outputPath}\" && ")
 
         val command : Array<String> = if(Utils.IS_WINDOWS) {
             val console = (arrayOf("cmd", "/c"/*, "start", "cmd", "/k"*/))

@@ -23,7 +23,7 @@ data class FinalProxyListData(val proxies : MutableList<FinalProxyDataType>) {
 data class FinalProxyDataType(val protocol : String, val ip : String, val port : Int)
 
 @Serializable
-data class PerformanceConnectData(val ovh_FR : EndpointServerData?=null, val aws_NA : EndpointServerData?=null,
+data class PerformanceConnectData(val aws_NA : EndpointServerData?=null,
                                   val ora_UK : EndpointServerData?=null, val ora_JP : EndpointServerData?=null,
                                   val ms_HK : EndpointServerData?=null) {
         fun default() : PerformanceConnectData =
@@ -32,7 +32,6 @@ data class PerformanceConnectData(val ovh_FR : EndpointServerData?=null, val aws
                 EndpointServerData().default(),
                 EndpointServerData().default(),
                 EndpointServerData().default(),
-                EndpointServerData().default()
             )
 
 }

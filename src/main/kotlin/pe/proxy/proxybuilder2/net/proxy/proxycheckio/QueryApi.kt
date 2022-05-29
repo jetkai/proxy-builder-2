@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component
 import pe.proxy.proxybuilder2.database.ProxyRepository
 import pe.proxy.proxybuilder2.util.KotlinSerializer
 import pe.proxy.proxybuilder2.util.ProxyConfig
+import pe.proxy.proxybuilder2.util.Tasks
 import pe.proxy.proxybuilder2.util.Utils
 import java.net.URI
 import java.net.http.HttpClient
@@ -36,53 +37,66 @@ class QueryApi(private val proxyRepository : ProxyRepository,
 
     private val executor : ScheduledExecutorService = Executors.newScheduledThreadPool(1)
 
+    private val pause = Tasks.thread.queryApi?.pause!!
+
     override fun onApplicationEvent(event : ApplicationReadyEvent) {
         //Runs query() every minute
         if(config.enabledThreads.queryApi)
             executor.scheduleAtFixedRate({ initialize() }, 0, 1, TimeUnit.MINUTES)
     }
 
-    fun initialize() = try {
-        logger.info("Querying ProxyCheck API")
+    fun initialize() {
+        try {
+            if(pause.get())
+                return logger.info("Thread paused")
 
-        val entitiesFromRepository = proxyRepository.findByLocationIsNullAndLastSuccessIsNotNull()
+            logger.info("Querying ProxyCheck API")
 
-        val entities = entitiesFromRepository.subList(0, 100) //Max 100 so that we don't overload the API
+            val entitiesFromRepository = proxyRepository.findByLocationIsNullAndLastSuccessIsNotNull()
 
-        for (entity in entities) {
-            val request = builder.uri(apiURI(entity.ip!!)) //Impossible for entity.ip to be null
-                .GET()
-                .timeout(Duration.ofSeconds(5))
-                .build()
+            if (entitiesFromRepository.isEmpty())
+                return logger.info("Repository is empty")
 
-            val json = client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).get().body()
-            val clazzes = Utils.serialize(json)
+            val maxSize = (if(entitiesFromRepository.size > 100) 100 else entitiesFromRepository.size)
 
-            clazzes.forEach { clazz ->
-                when (clazz) {
-                    is LocationData -> {
-                        entity.location = KotlinSerializer.encode(clazz)
-                        entity.provider = clazz.provider //Default Provider
-                    }
-                    is RiskData -> entity.detection = KotlinSerializer.encode(clazz)
-                    is OperatorData -> {
-                        val policiesClazz = clazzes[clazzes.size - 1]
-                        if (policiesClazz is PoliciesData && !policiesClazz.isEmpty())
-                            clazz.policies = policiesClazz
-                        if (!clazz.isEmpty())
-                            entity.provider = KotlinSerializer.encode(clazz) //Overwrite Provider if more info available
+            val entities = entitiesFromRepository.subList(0, maxSize) //Max 100 so that we don't overload the API
+
+            for (entity in entities) {
+                val request = builder.uri(apiURI(entity.ip!!)) //Impossible for entity.ip to be null
+                    .GET()
+                    .timeout(Duration.ofSeconds(5))
+                    .build()
+
+                val json = client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).get().body()
+                val clazzes = Utils.serialize(json)
+
+                clazzes.forEach { clazz ->
+                    when (clazz) {
+                        is LocationData -> {
+                            entity.location = KotlinSerializer.encode(clazz)
+                            entity.provider = clazz.provider //Default Provider
+                        }
+                        is RiskData -> entity.detection = KotlinSerializer.encode(clazz)
+                        is OperatorData -> {
+                            val policiesClazz = clazzes[clazzes.size - 1]
+                            if (policiesClazz is PoliciesData && !policiesClazz.isEmpty())
+                                clazz.policies = policiesClazz
+                            if (!clazz.isEmpty())
+                                entity.provider =
+                                    KotlinSerializer.encode(clazz) //Overwrite Provider if more info available
+                        }
                     }
                 }
             }
+
+            proxyRepository.saveAll(entities)
+            logger.info("Query complete - ${entities.size}")
+
+        } catch (e: Exception) {
+            logger.error(e.localizedMessage)
+        } catch (t: Throwable) {
+            logger.error(t.localizedMessage)
         }
-
-        proxyRepository.saveAll(entities)
-        logger.info("Query complete - ${entities.size}")
-
-    } catch (e : Exception) {
-        logger.error(e.localizedMessage)
-    } catch (t : Throwable) {
-        logger.error(t.localizedMessage)
     }
 
     fun apiURI(proxyIp : String) : URI {

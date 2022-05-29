@@ -10,65 +10,71 @@ import com.fasterxml.jackson.dataformat.csv.CsvSchema
 import com.fasterxml.jackson.dataformat.xml.XmlFactory
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import org.apache.commons.csv.CSVFormat
+import org.apache.commons.csv.CSVPrinter
 import org.slf4j.LoggerFactory
-import org.springframework.boot.context.event.ApplicationReadyEvent
-import org.springframework.context.ApplicationListener
-import org.springframework.stereotype.Component
-import pe.proxy.proxybuilder2.database.*
+import pe.proxy.proxybuilder2.database.EntityForPublicView
+import pe.proxy.proxybuilder2.database.EntityForPublicViewForCSV
+import pe.proxy.proxybuilder2.database.ProxyEntity
+import pe.proxy.proxybuilder2.database.ProxyRepository
 import pe.proxy.proxybuilder2.net.proxy.data.SupplierProxyListData
 import pe.proxy.proxybuilder2.util.ProxyConfig
 import pe.proxy.proxybuilder2.util.Utils
 import java.io.File
+import java.nio.file.Files
 
 
-@Component
-class CustomFileWriter(val repository: ProxyRepository,
-                       val config: ProxyConfig) : ApplicationListener<ApplicationReadyEvent> {
+class CustomFileWriter(private val repository : ProxyRepository, private val config : ProxyConfig)  {
 
     private val logger = LoggerFactory.getLogger(CustomFileWriter::class.java)
 
     @Throws
-    override fun onApplicationEvent(event: ApplicationReadyEvent) {
-        try {
-            initialize()
-        } catch (e : Exception) {
-            e.printStackTrace()
-        } catch (t : Throwable) {
-            t.printStackTrace()
-        }
-    }
-
-    @Throws
     fun initialize() {
-        //val lastOnlineSince = Utils.timestampMinus(30) //Within the past 30 minutes
-        //val repo = repository.findByLastSuccessAfter(lastOnlineSince)
-        val repo = repository.findByLocationIsNotNullAndLastSuccessIsNotNull()
-        for (viewType in ViewType.values()) {
-            if (viewType == ViewType.CLASSIC) {
-                val proxies = convertClassic(repo, viewType)
-                for (fileExtension in FileExtension.values())
-                    write(proxies, viewType, fileExtension)
-            } else {
-                val proxies = convert(repo, viewType)
-                for (fileExtension in FileExtension.values())
-                    write(proxies, viewType, fileExtension)
+        val lastOnlineSince = Utils.timestampMinus(90) //Within the past 90 minutes
+        val lastOnlineSinceProxies = Utils.sortByIp(repository.findByLastSuccessAfter(lastOnlineSince))
+        val archiveProxies = Utils.sortByIp(repository.findAll().toList())
+
+        ViewType.values().forEach { viewType ->
+            when (viewType) {
+                ViewType.CLASSIC -> {
+                    val proxies = convertClassic(lastOnlineSinceProxies, viewType)
+                    for (fileExtension in FileExtension.values())
+                        write(proxies, viewType, fileExtension)
+                }
+                ViewType.ARCHIVE -> {
+                    val proxies = convert(archiveProxies, viewType)
+                    val classicArchive = convertClassic(archiveProxies, viewType)
+                    for (fileExtension in FileExtension.values()) {
+                        write(proxies, viewType, fileExtension)
+                        write(classicArchive, viewType, fileExtension)
+                    }
+                }
+                ViewType.BASIC, ViewType.ADVANCED -> {
+                    val proxies = convert(lastOnlineSinceProxies, viewType)
+                    for (fileExtension in FileExtension.values())
+                        write(proxies, viewType, fileExtension)
+                }
             }
         }
+
+        //Deprecated TODO - Update ReadMe Builder
+        ReadMeFile(config).create(convert(lastOnlineSinceProxies, ViewType.ADVANCED), archiveProxies)
     }
 
-    fun convert(repo : List<ProxyEntity>, viewType: ViewType) : MutableList<EntityForPublicView> {
+    private fun convert(repo : List<ProxyEntity>, viewType: ViewType) : MutableList<EntityForPublicView> {
         val proxies = mutableListOf<EntityForPublicView>()
         when (viewType) {
             ViewType.BASIC -> { repo.mapTo(proxies) { EntityForPublicView().basic(it) } }
             ViewType.ADVANCED -> { repo.mapTo(proxies) { EntityForPublicView().advanced(it) } }
-            else -> {}
+            ViewType.ARCHIVE -> { repo.mapTo(proxies) { EntityForPublicView().advanced(it) } }
+            else -> { }
         }
         return proxies
     }
 
-    fun convertClassic(repo : List<ProxyEntity>, viewType: ViewType) : SupplierProxyListData {
+    private fun convertClassic(repo : List<ProxyEntity>, viewType: ViewType) : SupplierProxyListData {
         val proxies = SupplierProxyListData(mutableListOf(), mutableListOf(), mutableListOf(), mutableListOf())
-        if (viewType == ViewType.CLASSIC) {
+        if (viewType == ViewType.CLASSIC || viewType == ViewType.ARCHIVE) {
             repo.forEach { EntityForPublicView().classic(proxies, it) }
         }
         return proxies
@@ -76,16 +82,16 @@ class CustomFileWriter(val repository: ProxyRepository,
 
     @Throws
     fun write(proxies : List<EntityForPublicView>, viewType: ViewType, extension : FileExtension) {
-        var file = File("${config.outputPath}/online-proxies/${extension.name.lowercase()}" +
-                "/proxies-${viewType.name.lowercase()}.${extension.name.lowercase()}")
-        if (file.lastModified() >= Utils.timestampMinus(60).time) //Prevent overwriting file within 60 mins
+        var file = fileBuilder("proxies-${viewType.name.lowercase()}", extension, viewType)
+
+        //Prevent overwriting file within 60 mins
+        if (file.lastModified() >= Utils.timestampMinus(30).time)
             return
 
-        if(extension == FileExtension.TXT && viewType == ViewType.BASIC) {
+        if(extension == FileExtension.TXT && (viewType == ViewType.BASIC || viewType == ViewType.ARCHIVE)) {
             //All Proxies
             var proxiesAsString = proxies.joinToString(separator = "\n") { "${it.ip}:${it.port}" }
-            file = File("${config.outputPath}/online-proxies/${extension.name.lowercase()}" +
-                    "/proxies.${extension.name.lowercase()}")
+            file = fileBuilder("proxies", extension, viewType)
             file.writeText(proxiesAsString)
 
             val protocols = listOf("http", "https", "socks4", "socks5")
@@ -94,11 +100,9 @@ class CustomFileWriter(val repository: ProxyRepository,
                     prox.protocols
                         ?.map { repo -> prox to repo }
                         ?.filter { it.second.type == protocolName }!!
-                }.joinToString(separator = "\n") { "${it.first.ip}:${it.first.port}" }
-                file = File(
-                    "${config.outputPath}/online-proxies/${extension.name.lowercase()}" +
-                            "/proxies-$protocolName.${extension.name.lowercase()}"
-                )
+                }.distinctBy { listOf(it.first.ip, it.first.port) }
+                    .joinToString(separator = "\n") { "${it.first.ip}:${it.first.port}" }
+                file = fileBuilder("proxies-$protocolName", extension, viewType)
                 file.writeText(proxiesAsString)
             }
             return
@@ -111,15 +115,14 @@ class CustomFileWriter(val repository: ProxyRepository,
 
         if(extension == FileExtension.CSV && mapper is CsvMapper) {
             when (viewType) {
-                ViewType.ADVANCED -> {
+                ViewType.ADVANCED, ViewType.ARCHIVE -> {
                     val entity = EntityForPublicViewForCSV().convert(proxies)
                     val schema: CsvSchema = mapper.schemaFor(EntityForPublicViewForCSV::class.java)
                         .withHeader().sortedBy(* EntityForPublicViewForCSV().order(viewType))
                     mapper.writerFor(List::class.java).with(schema).writeValue(file, entity)
                 }
-                ViewType.BASIC -> { //TODO
-                }
-                else -> {}
+                ViewType.BASIC -> { }  //TODO
+                else -> { }
             }
             return
         }
@@ -127,11 +130,9 @@ class CustomFileWriter(val repository: ProxyRepository,
         mapper.writeValue(file, proxies)
     }
 
-    fun write(proxies : SupplierProxyListData, viewType: ViewType, extension : FileExtension) {
-        //val file = File("${config.outputPath}/test.${extension.name.lowercase()}")
-        val file = File("${config.outputPath}/online-proxies/${extension.name.lowercase()}" +
-                "/proxies.${extension.name.lowercase()}")
-        if (file.lastModified() >= Utils.timestampMinus(60).time) //Prevent overwriting file within 60 mins
+    private fun write(proxies : SupplierProxyListData, viewType: ViewType, extension : FileExtension) {
+        val file = fileBuilder("proxies", extension, viewType)
+        if (file.lastModified() >= Utils.timestampMinus(30).time) //Prevent overwriting file within 60 mins
             return
 
         val mapper = mapper(extension)
@@ -139,14 +140,41 @@ class CustomFileWriter(val repository: ProxyRepository,
             ?.enable(SerializationFeature.INDENT_OUTPUT)
             ?: return logger.error("Unable to read mapper extension type")
 
-        if(extension == FileExtension.CSV && mapper is CsvMapper) {
+        if(extension == FileExtension.CSV && mapper is CsvMapper) { //TODO CHANGE THIS - Proxy Builder 1.0
             when (viewType) {
-                ViewType.CLASSIC -> {
-                    val schema: CsvSchema = mapper.schemaFor(SupplierProxyListData::class.java).withHeader()
-                        .sortedBy(* EntityForPublicViewForCSV().order(viewType))
-                    mapper.writerFor(SupplierProxyListData::class.java).with(schema).writeValue(file, proxies)
+                ViewType.CLASSIC, ViewType.ARCHIVE -> {
+                    val writer = Files.newBufferedWriter(file.toPath())
+                    val format = CSVFormat.Builder.create()
+                    format.setHeader("http", "https", "socks4", "socks5")
+
+                    val csvPrinter = CSVPrinter(writer, format.build())
+
+                    val socks4Size = proxies.socks4.size
+                    val socks5Size = proxies.socks5.size
+                    val httpSize = proxies.http.size
+                    val httpsSize = proxies.https.size
+
+                    var maxSize = 0
+                    if (socks4Size > maxSize) maxSize = socks4Size
+                    if (socks5Size > maxSize) maxSize = socks5Size
+                    if (httpSize > maxSize) maxSize = httpSize
+                    if (httpsSize > maxSize) maxSize = httpsSize
+
+                    for (i in 0 until maxSize) {
+                        var socks4Value = ""
+                        var socks5Value = ""
+                        var httpValue = ""
+                        var httpsValue = ""
+                        if (proxies.socks4.size > i) socks4Value = proxies.socks4[i]
+                        if (proxies.socks5.size > i) socks5Value = proxies.socks5[i]
+                        if (proxies.http.size > i) httpValue = proxies.http[i]
+                        if (proxies.https.size > i) httpsValue = proxies.https[i]
+                        csvPrinter.printRecord(httpValue, httpsValue, socks4Value, socks5Value)
+                    }
+                    csvPrinter.flush()
+                    csvPrinter.close()
                 }
-                else -> {}
+                else -> { }
             }
             return
         }
@@ -165,27 +193,24 @@ class CustomFileWriter(val repository: ProxyRepository,
         }
     }
 
-    enum class ViewType(private val id : Int) {
-        CLASSIC(0),
-        BASIC(1),
-        ADVANCED(2);
-        //   MODERN(3),
+    private fun fileBuilder(fileName : String, fileExtension : FileExtension, viewType : ViewType) : File {
+        var filePath = config.outputPath
+        val extension = fileExtension.name.lowercase()
 
-        open fun getById(id : Int) : ViewType {
-            return ViewType.values().firstOrNull { it.id == id } ?: CLASSIC
-        }
+        //Primary Folder
+        filePath += (if(viewType == ViewType.ARCHIVE) "/archive/" else "/online-proxies/")
+
+        //Sub Folder
+        filePath += "$extension/"
+
+        //File Name + Extension
+        filePath += "$fileName.$extension"
+
+        return File(filePath) //Final Path
     }
 
-    enum class FileExtension(private val id : Int) {
-        TXT(0),
-        JSON(1),
-        YAML(2),
-        XML(3),
-        CSV(4);
+    enum class ViewType { CLASSIC, BASIC, ADVANCED, ARCHIVE; }
 
-        open fun getById(id : Int) : FileExtension {
-            return FileExtension.values().firstOrNull { it.id == id } ?: TXT
-        }
-    }
+    enum class FileExtension { TXT, JSON, YAML, XML, CSV; }
 
 }

@@ -9,11 +9,11 @@ import pe.proxy.proxybuilder2.database.ProxyRepository
 import pe.proxy.proxybuilder2.net.proxy.tester.ProxyChannelData
 import pe.proxy.proxybuilder2.net.proxy.tester.ProxyConnect
 import pe.proxy.proxybuilder2.util.ProxyConfig
+import pe.proxy.proxybuilder2.util.Tasks
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * SQLProxyMonitor
@@ -28,9 +28,10 @@ class SQLProxyMonitor(val repository : ProxyRepository, val config : ProxyConfig
 
     private val logger = LoggerFactory.getLogger(SQLProxyMonitor::class.java)
 
-    private val executor : ScheduledExecutorService = Executors.newScheduledThreadPool(1)
+    private val executor : ScheduledExecutorService = Executors.newScheduledThreadPool(2)
 
-    private var ready = AtomicBoolean(true)
+    private val running = Tasks.thread.sqlProxyMonitor?.running!!
+    private val pause = Tasks.thread.proxyConnect?.pause!!
 
     override fun onApplicationEvent(event: ApplicationReadyEvent) {
         if(config.enabledThreads.sqlProxyMonitor)
@@ -38,7 +39,7 @@ class SQLProxyMonitor(val repository : ProxyRepository, val config : ProxyConfig
     }
 
     fun initialize() = try {
-        if (ready.get())
+        if (!running.get())
             filter()
         else
             logger.info("Task is not ready")
@@ -50,11 +51,15 @@ class SQLProxyMonitor(val repository : ProxyRepository, val config : ProxyConfig
 
     //Filters the proxies into a list then calls the "write(proxy)" function
     fun filter() {
-        ready.set(false)
+        if(pause.get())
+            return logger.info("Thread paused")
+
+        running.set(true)
         val proxies = ProxyConnect.testedProxies
         if(proxies.isNotEmpty())
             writeAll(proxies)
-        ready.set(true)
+
+        running.set(false)
     }
 
     //Writes proxy to database

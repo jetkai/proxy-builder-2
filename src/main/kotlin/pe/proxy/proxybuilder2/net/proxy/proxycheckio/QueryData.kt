@@ -1,5 +1,6 @@
 package pe.proxy.proxybuilder2.net.proxy.proxycheckio
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import kotlinx.serialization.Serializable
 
 /**
@@ -17,6 +18,7 @@ data class LocationData(var continent : String?=null, var country : String?=null
 @Serializable
 data class OperatorData(var name: String?=null, var url: String?=null, var anonymity: String?=null,
                         var popularity: String?=null, var policies: PoliciesData?=null) {
+    @JsonIgnore
     fun isEmpty() : Boolean = name == null && url == null && anonymity == null
             && popularity == null && policies == null
 }
@@ -26,6 +28,7 @@ data class PoliciesData(var ad_filtering : Boolean?=null, var free_access : Bool
                     var paid_access : Boolean?=null, var port_forwarding : Boolean?=null,
                     var logging : Boolean?=null, var anonymous_payments : Boolean?=null,
                     var crypto_payments : Boolean?=null, var traceable_ownership : Boolean?=null) {
+    @JsonIgnore
     fun isEmpty() : Boolean = ad_filtering == null && free_access == null && paid_access == null
             && port_forwarding == null && logging == null && anonymous_payments == null
             && crypto_payments == null && traceable_ownership == null
