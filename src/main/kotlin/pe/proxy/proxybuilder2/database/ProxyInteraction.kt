@@ -77,7 +77,9 @@ class ProxyInteraction(private val repository : ProxyRepository) {
 
     //Might be very heavy on resources, will test - May be better to update as a single entity
     fun getProxyEntities(proxies : ConcurrentLinkedQueue<ProxyChannelData>) : List<EntityChannelData> {
-        val copyOfProxies = proxies.distinctBy { it.ip }.toMutableList() //Otherwise we are out of sync when comparing
+        //Make copyOfProxies - otherwise we are out of sync when comparing
+        val copyOfProxies = proxies.distinctBy { it.ip }.toMutableList()
+
         val proxyEntityList = mutableListOf<EntityChannelData>()
         try {
             val listIps = copyOfProxies.map { it.ip }.distinct()
@@ -100,7 +102,7 @@ class ProxyInteraction(private val repository : ProxyRepository) {
             logger.info("TESTING SIZE0: ${proxies.size}")
             proxies.removeAll(copyOfProxies.toSet())
             logger.info("TESTING SIZE1: ${proxies.size}")
-           // proxies.removeIf { it in proxyEntityList.map { repo -> repo.proxy } }
+            //proxies.removeIf { listOf(it.ip, it.type, it.port) in copyOfProxies.map { it2 -> listOf(it2.ip, it2.port, it2.type) } }
         } catch (e : Exception) {
             logger.error(e.localizedMessage)
         } catch (t : Throwable) {

@@ -27,7 +27,7 @@ object Utils {
 
     val IS_WINDOWS = System.getProperty("os.name").startsWith("Windows")
 
-    fun removeBadIps(proxies : MutableList<FinalProxyDataType>) : MutableList<FinalProxyDataType> {
+    fun distinctBadIps(proxies : MutableList<FinalProxyDataType>) : MutableList<FinalProxyDataType> {
         val pattern = Pattern.compile("^((\\d|[1-9]\\d|1\\d\\d|2[0-4]\\d|25[0-5])(\\.(?!$)|$)){4}$")
         proxies.removeIf { !pattern.matcher(it.ip).matches() }
         return proxies
@@ -66,7 +66,7 @@ object Utils {
 
     fun sortByIp(proxyArray : List<ProxyEntity>) : List<ProxyEntity> {
         val comparator : Comparator<ProxyEntity> = Comparator {
-                ip1, ip2 -> toNumeric(ip1.ip!!).compareTo(toNumeric(ip2.ip!!))
+                ip1, ip2 -> toNumeric(ip1.ip.toString()).compareTo(toNumeric(ip2.ip.toString()))
         }
         return proxyArray.sortedWith(comparator)
     }
@@ -88,19 +88,7 @@ object Utils {
                 (finalIp[2].toLong() shl 8) + finalIp[3].toLong())
     }
 
-    private fun filterProxies(unfilteredProxyList : MutableList<String>) : MutableList<String> {
-        val filteredProxyList = mutableListOf<String>()
-        unfilteredProxyList.filter {
-            it.contains(":")
-        }.forEach {
-            val nextProxy = formatIp(it)
-            if(nextProxy != null)
-                filteredProxyList.add(nextProxy)
-        }
-        return filteredProxyList.distinct().toMutableList()
-    }
-
-    fun lowestPing(connectionData: PerformanceConnectData) : Long {
+    fun lowestPing(connectionData : PerformanceConnectData) : Long {
         val pingArray = listOf(
             connectionData.aws_NA?.ping!!, connectionData.ms_HK?.ping!!,
             connectionData.ora_JP?.ping!!, connectionData.ora_UK?.ping!!,
@@ -129,7 +117,7 @@ object Utils {
     }
 
     //Custom Deserializer - What could go wrong :)
-    fun deserialize(json : String) : LinkedHashMap<String, Any> {
+    private fun deserialize(json : String) : LinkedHashMap<String, Any> {
         val map = LinkedHashMap<String, Any>()
         val factory = JsonFactory()
         val jsonParser = factory.createParser(json)
@@ -165,9 +153,12 @@ object Utils {
         return map
     }
 
-    fun timestampNow() : Timestamp = Timestamp.valueOf(LocalDateTime.now())
+    fun timestampNow() : Timestamp {
+        return Timestamp.valueOf(LocalDateTime.now())
+    }
 
-    fun timestampMinus(minusMinutes : Long) : Timestamp =
-        Timestamp.valueOf(LocalDateTime.now().minusMinutes(minusMinutes))
+    fun timestampMinus(minusMinutes : Long) : Timestamp {
+        return Timestamp.valueOf(LocalDateTime.now().minusMinutes(minusMinutes))
+    }
 
 }

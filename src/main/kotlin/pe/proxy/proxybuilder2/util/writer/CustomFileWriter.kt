@@ -28,37 +28,52 @@ class CustomFileWriter(private val repository : ProxyRepository, private val con
 
     private val logger = LoggerFactory.getLogger(CustomFileWriter::class.java)
 
-    @Throws
     fun initialize() {
-        val lastOnlineSince = Utils.timestampMinus(90) //Within the past 90 minutes
-        val lastOnlineSinceProxies = Utils.sortByIp(repository.findByLastSuccessAfter(lastOnlineSince))
-        val archiveProxies = Utils.sortByIp(repository.findAll().toList())
+        try {
+            val lastOnlineSince = Utils.timestampMinus(90) //Within the past 90 minutes
+            val lastOnlineSinceProxies = Utils.sortByIp(repository.findByLastSuccessAfter(lastOnlineSince))
+            val archiveProxies = Utils.sortByIp(repository.findAll().toList())
 
-        ViewType.values().forEach { viewType ->
-            when (viewType) {
-                ViewType.CLASSIC -> {
-                    val proxies = convertClassic(lastOnlineSinceProxies, viewType)
-                    for (fileExtension in FileExtension.values())
-                        write(proxies, viewType, fileExtension)
-                }
-                ViewType.ARCHIVE -> {
-                    val proxies = convert(archiveProxies, viewType)
-                    val classicArchive = convertClassic(archiveProxies, viewType)
-                    for (fileExtension in FileExtension.values()) {
-                        write(proxies, viewType, fileExtension)
-                        write(classicArchive, viewType, fileExtension)
+            logger.info("Gathering last online since $lastOnlineSince")
+
+            if (lastOnlineSinceProxies.isEmpty())
+                logger.error("Empty proxy list, unable to write")
+            if (archiveProxies.isEmpty())
+                logger.error("Empty proxy archive list, unable to write")
+
+            if(archiveProxies.isEmpty() || lastOnlineSinceProxies.isEmpty())
+                return
+
+            ViewType.values().forEach { viewType ->
+                when (viewType) {
+                    ViewType.CLASSIC -> {
+                        val proxies = convertClassic(lastOnlineSinceProxies, viewType)
+                        for (fileExtension in FileExtension.values())
+                            write(proxies, viewType, fileExtension)
+                    }
+                    ViewType.ARCHIVE -> {
+                        val proxies = convert(archiveProxies, viewType)
+                        val classicArchive = convertClassic(archiveProxies, viewType)
+                        for (fileExtension in FileExtension.values()) {
+                            write(proxies, viewType, fileExtension)
+                            write(classicArchive, viewType, fileExtension)
+                        }
+                    }
+                    ViewType.BASIC, ViewType.ADVANCED -> {
+                        val proxies = convert(lastOnlineSinceProxies, viewType)
+                        for (fileExtension in FileExtension.values())
+                            write(proxies, viewType, fileExtension)
                     }
                 }
-                ViewType.BASIC, ViewType.ADVANCED -> {
-                    val proxies = convert(lastOnlineSinceProxies, viewType)
-                    for (fileExtension in FileExtension.values())
-                        write(proxies, viewType, fileExtension)
-                }
             }
-        }
 
-        //Deprecated TODO - Update ReadMe Builder
-        ReadMeFile(config).create(convert(lastOnlineSinceProxies, ViewType.ADVANCED), archiveProxies)
+            //Deprecated TODO - Update ReadMe Builder
+            ReadMeFile(config).create(convert(lastOnlineSinceProxies, ViewType.ADVANCED), archiveProxies)
+        } catch (e : Exception) {
+            logger.error(e.localizedMessage)
+        } catch (t : Throwable) {
+            logger.error(t.localizedMessage)
+        }
     }
 
     private fun convert(repo : List<ProxyEntity>, viewType: ViewType) : MutableList<EntityForPublicView> {
@@ -80,8 +95,7 @@ class CustomFileWriter(private val repository : ProxyRepository, private val con
         return proxies
     }
 
-    @Throws
-    fun write(proxies : List<EntityForPublicView>, viewType: ViewType, extension : FileExtension) {
+    private fun write(proxies : List<EntityForPublicView>, viewType: ViewType, extension : FileExtension) {
         var file = fileBuilder("proxies-${viewType.name.lowercase()}", extension, viewType)
 
         //Prevent overwriting file within 60 mins

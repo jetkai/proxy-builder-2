@@ -6,7 +6,7 @@ package pe.proxy.proxybuilder2.git
  * @author Kai
  * @version 1.0, 19/05/2022
  */
-enum class GitStage(var command : Array<String>) {
+enum class GitStage(val command : Array<String>) {
 
     NOT_RUNNING(emptyArray()),
     RUNNING(arrayOf("git", "add", ".")),

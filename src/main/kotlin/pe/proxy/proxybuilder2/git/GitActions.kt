@@ -28,7 +28,7 @@ class GitActions(private val repository: ProxyRepository,
 
     private val shell = Shell(config)
 
-    private val executor : ScheduledExecutorService = Executors.newScheduledThreadPool(1)
+    private val executor : ScheduledExecutorService = Executors.newScheduledThreadPool(2)
 
     override fun onApplicationEvent(event : ApplicationReadyEvent) {
         executor.scheduleAtFixedRate({ initialize() },15,90, TimeUnit.MINUTES)
@@ -51,11 +51,16 @@ class GitActions(private val repository: ProxyRepository,
     }
 
     private fun nextAction(stage : GitStage) {
-        if(stage == GitStage.COMMITTING)
-            stage.command += "Updated-${ SimpleDateFormat("dd/MM/yyyy-HH:mm:ss").format(Date()) }"
+        val command = when (stage) {
+            GitStage.COMMITTING -> {
+                stage.command
+                    .plus("Updated-${ SimpleDateFormat("dd/MM/yyyy-HH:mm:ss").format(Date()) }")
+            }
+            else -> { stage.command }
+        }
+        shell.parseCommand(command)
 
-        shell.parseCommand(stage.command)
-        logger.info(stage.name)
+        logger.info("${stage.name} -> $command")
     }
 
 }

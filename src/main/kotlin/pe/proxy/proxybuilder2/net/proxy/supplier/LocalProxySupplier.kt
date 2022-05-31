@@ -10,7 +10,7 @@ import pe.proxy.proxybuilder2.util.ProxyConfig
 import java.io.File
 
 /**
- * CustomProxySupplier
+ * LocalProxySupplier
  *
  * @author Kai
  * @version 1.0, 15/05/2022

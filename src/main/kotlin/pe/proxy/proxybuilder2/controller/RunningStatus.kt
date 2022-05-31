@@ -34,19 +34,42 @@ class RunningStatus(val repository : ProxyRepository) {
     }
 
     @RequestMapping(value = ["online"], produces = ["application/json"], method = [RequestMethod.GET])
-    fun onRequestForOnlineProxies(@RequestParam(value = "size", required = false)
-                                  size : Boolean) : ResponseEntity<Any> {
-        val lastOnlineSince = Utils.timestampMinus(30) //Within the past 30 minutes
+    fun onRequestForOnlineProxies(@RequestParam(value = "size", required = false) size : Boolean,
+                                  @RequestParam(value = "fast", required = false) fast : Boolean,
+                                  @RequestParam(value = "maxsize", required = false) maxSize : Int
+    ): ResponseEntity<Any> {
+
+        val lastOnlineSince = Utils.timestampMinus(90) //Within the past 90 minutes
         val repoResults = repository.findByLastSuccessAfter(lastOnlineSince)
 
         if(size)
             return ResponseEntity<Any>(repoResults.size, HttpStatus.OK)
 
-        val proxies = mutableListOf<EntityForPublicView>()
+        var proxies = mutableListOf<EntityForPublicView>()
+        
+        repoResults.mapTo(proxies) { EntityForPublicView().advanced(it) }
 
-        //Temp deserializer (for testing) - this is currently hybrid with KTX & Jackson - Bad
-        //Jackson doesn't parse KTX string decode properly, not sure how to parse KTX JsonElement to Jackson ATM
-        repoResults.mapTo(proxies) { EntityForPublicView().basic(it) }
+        if(fast) {
+            var fastProxies = (proxies.map {
+                    listOf(
+                        it.endpoints?.ora_JP, it.endpoints?.ora_UK,
+                        it.endpoints?.aws_NA, it.endpoints?.ms_HK
+                    )
+                }.flatMap { endpoints ->
+                    endpoints.filter {
+                        it?.uptime?.replace("%", "")?.toDouble()!! > 80
+                                && it.connections?.success!! > 10
+                    }
+                })
+
+            if(maxSize > 0)
+                fastProxies = fastProxies.subList(0, maxSize - 1)
+
+            return ResponseEntity<Any>(fastProxies, HttpStatus.OK)
+        }
+
+        if(maxSize > 0)
+            proxies = proxies.subList(0, maxSize - 1)
 
         return ResponseEntity<Any>(proxies, HttpStatus.OK)
     }

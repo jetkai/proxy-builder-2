@@ -9,9 +9,11 @@ import org.slf4j.LoggerFactory
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.ApplicationListener
 import org.springframework.stereotype.Component
+import pe.proxy.proxybuilder2.database.ProxyRepository
 import pe.proxy.proxybuilder2.monitor.ChecksPerSecond
 import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyDataType
 import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyListData
+import pe.proxy.proxybuilder2.net.proxy.supplier.DatabaseProxySupplier
 import pe.proxy.proxybuilder2.net.proxy.supplier.LocalProxySupplier
 import pe.proxy.proxybuilder2.net.proxy.supplier.MainProxySupplier
 import pe.proxy.proxybuilder2.util.ProxyConfig
@@ -30,7 +32,7 @@ import java.util.concurrent.TimeUnit
  * @version 1.0, 19/05/2022
  */
 @Component
-class ProxyConnect(val config : ProxyConfig) : ApplicationListener<ApplicationReadyEvent> {
+class ProxyConnect(val repository : ProxyRepository, val config : ProxyConfig) : ApplicationListener<ApplicationReadyEvent> {
 
     private val logger = LoggerFactory.getLogger(ProxyConnect::class.java)
 
@@ -44,6 +46,7 @@ class ProxyConnect(val config : ProxyConfig) : ApplicationListener<ApplicationRe
 
     private val running = Tasks.thread.proxyConnect?.running!!
     private val pause = Tasks.thread.proxyConnect?.pause!!
+    private var retryAttempts = 0
 
     override fun onApplicationEvent(event : ApplicationReadyEvent) {
         if(config.enabledThreads.proxyConnect && !running.get())
@@ -54,27 +57,38 @@ class ProxyConnect(val config : ProxyConfig) : ApplicationListener<ApplicationRe
         running.set(true)
 
         val supplierProxyListData = FinalProxyListData(mutableListOf())
+        //Load proxy from JSON supplier
         val proxySupplier = MainProxySupplier(supplierProxyListData, config)
-        //Force load local proxies from proxies/*
+        //Load local proxies from "./proxies/*.json"
         LocalProxySupplier(supplierProxyListData, config).request().parse()
+        //Load proxies that we've already tested successfully, within the database
+        DatabaseProxySupplier(supplierProxyListData, repository).request().parse()
 
-        try {
-            proxySupplier
-                .request()  //Requests proxies from the web
-                .parse()    //Attempt to parse the proxies from the web
-        } catch (e : Exception) { //Attempt to re-run again after 30 seconds if error is captured
-            logger.error(e.localizedMessage)
-            Thread.sleep(30000L)
-            initialize()
-        } catch (t : Throwable) { //Attempt to re-run again after 30 seconds if error is captured
-            logger.error(t.localizedMessage)
-            Thread.sleep(30000L)
-            initialize()
+        //If the supplier is down, skip the supplier and try proxies that only exist within the database
+        if(retryAttempts < 4) {
+            try {
+                proxySupplier
+                    .request()  //Requests proxies from the web
+                    .parse()    //Attempt to parse the proxies from the web
+            } catch (e: Exception) { //Attempt to re-run again after 30 seconds if error is captured
+                retryAttempts++
+                logger.error(e.localizedMessage)
+                Thread.sleep(30000L)
+                initialize()
+                return
+            } catch (t: Throwable) { //Attempt to re-run again after 30 seconds if error is captured
+                retryAttempts++
+                logger.error(t.localizedMessage)
+                Thread.sleep(30000L)
+                initialize()
+                return
+            }
         }
+        retryAttempts = 0
 
         val proxies =
             //Utils.sortByIp(
-            Utils.removeBadIps(supplierProxyListData.proxies
+            Utils.distinctBadIps(supplierProxyListData.proxies
                 //.filter { it.protocol == "socks5" }.toMutableList()
                 // )
             ).distinctBy { listOf(it.ip, it.port, it.protocol) }
@@ -112,6 +126,8 @@ class ProxyConnect(val config : ProxyConfig) : ApplicationListener<ApplicationRe
         }
 
         running.set(false)
+        testedProxies.clear()
+
         logger.info("Completed ProxyConnect Task")
     }
 
