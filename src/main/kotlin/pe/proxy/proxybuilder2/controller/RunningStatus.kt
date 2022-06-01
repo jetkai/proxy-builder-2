@@ -21,7 +21,7 @@ import pe.proxy.proxybuilder2.util.Utils
  */
 @RestController
 @RequestMapping("/api/v1/")
-class RunningStatus(val repository : ProxyRepository) {
+class RunningStatus(private val repository : ProxyRepository) {
 
     /**
      * Running Check

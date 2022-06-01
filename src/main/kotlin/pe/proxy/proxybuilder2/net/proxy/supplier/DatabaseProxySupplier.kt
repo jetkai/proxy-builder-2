@@ -11,7 +11,7 @@ import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyListData
  * DatabaseProxySupplier
  *
  * @author Kai
- * @version 1.0, 15/05/2022
+ * @version 1.0, 31/05/2022
  */
 class DatabaseProxySupplier(override val data: FinalProxyListData,
                             private val repository: ProxyRepository) : IProxySupplier {
@@ -25,11 +25,10 @@ class DatabaseProxySupplier(override val data: FinalProxyListData,
         return this
     }
 
-    //TODO Modify parsing for CustomProxySupplier
     override fun parse() {
 
         val proxies = mutableListOf<EntityForPublicView>()
-        proxyEntities?.mapTo(proxies) { EntityForPublicView().advanced(it) }
+        proxyEntities?.mapTo(proxies) { EntityForPublicView().basic(it) }
 
         val protocols = listOf("http", "https", "socks4", "socks5")
         for(protocolName in protocols) {

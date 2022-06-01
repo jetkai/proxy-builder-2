@@ -102,7 +102,7 @@ class ProxyConnect(val repository : ProxyRepository, val config : ProxyConfig) :
     //Shuffle proxies & allocate the endpoint server for it to connect to
     //We want to shuffle them as some proxies only allow one open connection
     //Also try with both Auto Read disabled & enabled
-    fun prepare(proxies : List<FinalProxyDataType>) {
+    private fun prepare(proxies : List<FinalProxyDataType>) {
         val proxyDataList = mutableListOf<ProxyChannelData>()
 
         for(proxy in proxies) {
@@ -131,7 +131,7 @@ class ProxyConnect(val repository : ProxyRepository, val config : ProxyConfig) :
         logger.info("Completed ProxyConnect Task")
     }
 
-    fun connect(proxyData : ProxyChannelData) {
+    private fun connect(proxyData : ProxyChannelData) {
         val endpoint = proxyData.endpointServer ?: return
         val awaitTime = (if(pause.get()) 30000 else config.connectAwait)
 

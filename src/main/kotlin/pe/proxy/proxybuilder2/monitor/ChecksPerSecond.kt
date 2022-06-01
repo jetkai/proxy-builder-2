@@ -10,7 +10,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 @Component
-class ChecksPerSecond(val config : ProxyConfig) : ApplicationListener<ApplicationReadyEvent> {
+class ChecksPerSecond(private val config : ProxyConfig) : ApplicationListener<ApplicationReadyEvent> {
 
     private val logger = LoggerFactory.getLogger(ChecksPerSecond::class.java)
 
@@ -19,6 +19,7 @@ class ChecksPerSecond(val config : ProxyConfig) : ApplicationListener<Applicatio
     companion object { var proxyListSize = 0; var currentIndex = 0 }
 
     override fun onApplicationEvent(event: ApplicationReadyEvent) {
+        if(config.enabledThreads.checksPerSecond)
             executor.scheduleAtFixedRate( { initialize() }, 0, 1, TimeUnit.SECONDS )
     }
 
@@ -26,7 +27,7 @@ class ChecksPerSecond(val config : ProxyConfig) : ApplicationListener<Applicatio
     private var currentTime = 0
     private var remainingTime = "00:00:00"
 
-    fun initialize() {
+    private fun initialize() {
         val remaining = proxyListSize - currentIndex
 
         currentTime++

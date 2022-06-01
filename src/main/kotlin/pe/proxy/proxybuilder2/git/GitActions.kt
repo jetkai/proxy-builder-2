@@ -31,7 +31,7 @@ class GitActions(private val repository: ProxyRepository,
     private val executor : ScheduledExecutorService = Executors.newScheduledThreadPool(2)
 
     override fun onApplicationEvent(event : ApplicationReadyEvent) {
-        executor.scheduleAtFixedRate({ initialize() },15,90, TimeUnit.MINUTES)
+        executor.scheduleAtFixedRate({ initialize() },20,90, TimeUnit.MINUTES)
     }
 
     fun initialize() {

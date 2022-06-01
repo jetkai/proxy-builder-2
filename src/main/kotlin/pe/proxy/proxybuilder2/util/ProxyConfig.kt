@@ -16,14 +16,14 @@ data class ProxyConfig(val outputPath : String, val endpointServers : List<Endpo
                        val connectAwait : Long, val timeout : Int, val githubList : List<String>,
                        val enabledThreads : EnabledThreads, val twilio : Twilio) {
 
-    data class ProxySupplier(val mainUrl: String, val customUrl: String)
+    data class ProxySupplier(val mainUrl : String, val customUrl : String)
 
     data class EndpointServer(val name : String, val ip : String, val port : Int)
 
     data class ProxyCheckIo(val apiKey : String)
 
     data class EnabledThreads(val queryApi : Boolean, val proxyConnect : Boolean, val endpointMonitor : Boolean,
-                              val sqlProxyMonitor: Boolean)
+                              val sqlProxyMonitor: Boolean, val checksPerSecond : Boolean)
 
     data class Twilio(val sid : String, val token : String, val phoneNumberFrom : String, val phoneNumberTo : String)
 
