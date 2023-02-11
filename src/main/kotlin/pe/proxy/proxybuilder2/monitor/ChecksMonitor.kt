@@ -9,10 +9,16 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
+/**
+ * ChecksMonitor
+ *
+ * @author Kai
+ * @version 1.0, 29/05/2022
+ */
 @Component
-class ChecksPerSecond(private val config : ProxyConfig) : ApplicationListener<ApplicationReadyEvent> {
+class ChecksMonitor(private val config : ProxyConfig) : ApplicationListener<ApplicationReadyEvent> {
 
-    private val logger = LoggerFactory.getLogger(ChecksPerSecond::class.java)
+    private val logger = LoggerFactory.getLogger(ChecksMonitor::class.java)
 
     private val executor : ScheduledExecutorService = Executors.newScheduledThreadPool(1)
 

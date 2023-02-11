@@ -3,6 +3,12 @@ package pe.proxy.proxybuilder2.util
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicBoolean
 
+/**
+ * Tasks
+ *
+ * @author Kai
+ * @version 1.0, 29/05/2022
+ */
 object Tasks {
 
     private val logger = LoggerFactory.getLogger(Tasks::class.java)

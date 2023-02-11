@@ -13,7 +13,7 @@ import pe.proxy.proxybuilder2.util.Utils
 import pe.proxy.proxybuilder2.util.writer.CustomFileWriter
 
 /**
- * EntityChannelData
+ * DatabaseData
  *
  * @author Kai
  * @version 1.0, 23/05/2022
@@ -70,7 +70,7 @@ data class EntityForPublicView(
         ip = proxy.ip
         port = proxy.port
         credentials = KotlinDeserializer.decode(proxy.credentials)
-        protocols = KotlinDeserializer.decode<ProtocolData?>(proxy.protocols!!)?.protocol
+        protocols = KotlinDeserializer.decode<ProtocolData>(proxy.protocols)?.protocol
         endpoints = KotlinDeserializer.decode(proxy.connections)
         detection = KotlinDeserializer.decode(proxy.detection)
         provider = try {

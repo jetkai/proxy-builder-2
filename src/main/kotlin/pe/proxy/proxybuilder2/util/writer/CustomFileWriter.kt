@@ -23,7 +23,12 @@ import pe.proxy.proxybuilder2.util.Utils
 import java.io.File
 import java.nio.file.Files
 
-
+/**
+ * CustomFileWriter
+ *
+ * @author Kai
+ * @version 1.0, 24/05/2022
+ */
 class CustomFileWriter(private val repository : ProxyRepository, private val config : ProxyConfig)  {
 
     private val logger = LoggerFactory.getLogger(CustomFileWriter::class.java)
@@ -71,8 +76,6 @@ class CustomFileWriter(private val repository : ProxyRepository, private val con
             ReadMeFile(config).create(convert(lastOnlineSinceProxies, ViewType.ADVANCED), archiveProxies)
         } catch (e : Exception) {
             logger.error(e.localizedMessage)
-        } catch (t : Throwable) {
-            logger.error(t.localizedMessage)
         }
     }
 
@@ -114,8 +117,8 @@ class CustomFileWriter(private val repository : ProxyRepository, private val con
                     prox.protocols
                         ?.map { repo -> prox to repo }
                         ?.filter { it.second.type == protocolName }!!
-                }.distinctBy { listOf(it.first.ip, it.first.port) }
-                    .joinToString(separator = "\n") { "${it.first.ip}:${it.first.port}" }
+                }.distinctBy { listOf(it.first.ip, it.second.port) }
+                    .joinToString(separator = "\n") { "${it.first.ip}:${it.second.port}" }
                 file = fileBuilder("proxies-$protocolName", extension, viewType)
                 file.writeText(proxiesAsString)
             }

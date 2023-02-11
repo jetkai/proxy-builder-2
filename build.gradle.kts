@@ -1,19 +1,18 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
 
 plugins {
-    id("org.springframework.boot") version "2.6.7"
-    id("io.spring.dependency-management") version "1.0.11.RELEASE"
+    id("org.springframework.boot") version "3.0.2"
+    id("io.spring.dependency-management") version "1.1.0"
     //id("org.springframework.experimental.aot") version "0.11.5" //(LOGGING BUG)
 
-    kotlin("jvm") version "1.6.21"
-    kotlin("plugin.spring") version "1.6.21"
-    kotlin("plugin.serialization") version "1.6.21"
+    kotlin("jvm") version "1.8.0"
+    kotlin("plugin.spring") version "1.8.0"
+    kotlin("plugin.serialization") version "1.8.0"
 }
 
 group = "pe.proxy"
 version = "0.0.1-SNAPSHOT"
-java.sourceCompatibility = JavaVersion.VERSION_11
+java.sourceCompatibility = JavaVersion.VERSION_18
 
 configurations {
     compileOnly {
@@ -33,26 +32,26 @@ tasks.register("runDev") {
 }
 
 repositories {
-    maven { url = uri("https://repo.spring.io/release") }
     mavenCentral()
+    //maven { url = uri("https://repo.spring.io/release") }
+    //maven { url = uri("https://repo.spring.io/milestone") }
+    //maven { url = uri("https://repo.spring.io/snapshot") }
 }
 
 dependencies {
-    //KotlinX - Serializing JSON data to Kotlin Class
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.3")
-
     //Jackson Modules for serialization/deserialization
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.13.3")
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.13.3")
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.13.3")
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformats-text:2.13.3")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.2")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.14.2")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.14.2")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.14.2")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformats-text:2.14.2")
 
     //Apache CSV
-    implementation("org.apache.commons:commons-csv:1.9.0")
+    implementation("org.apache.commons:commons-csv:1.10.0")
 
     //Netty4 - Connecting to Endpoint Test Server, Testing the Proxy
-    implementation("io.netty:netty-all:4.1.77.Final")
+    implementation("io.netty:netty-handler-proxy:4.1.87.Final")
+    //implementation("io.netty:netty-all:4.1.78.Final")
 
     //JPA API - Interacting with JDBC
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
@@ -60,9 +59,12 @@ dependencies {
     //Spring Web - Minor API for checking if Application is running
     implementation("org.springframework.boot:spring-boot-starter-web")
 
-    //Twillo Text API (Sending alerts if detects one of the endpoint servers are down)
-    implementation("com.twilio.sdk:twilio:8.30.1")
+    //Twilio API (Sending alerts if detects one of the endpoint servers are down)
+    //TODO - Switch this to just a simple REST request, library isn't needed for EndpointMonitor
+    implementation("com.twilio.sdk:twilio:9.2.3")
 
+    //Caching
+    implementation("com.github.ben-manes.caffeine:caffeine:3.1.3")
 
     //WebFlux & Reactor - Minor API for checking if Application is running
     //implementation("org.springframework.boot:spring-boot-starter-webflux")
@@ -74,12 +76,19 @@ dependencies {
     //Kotlin Defaults
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.6.4")
     //implementation("org.junit.jupiter:junit-jupiter:5.8.2")
+
+    //KotlinX - Serializing JSON data to Kotlin Class
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0-RC")
+
+    //Jsoup to sanitize html
+    //implementation("org.jsoup:jsoup:1.15.1")
 
     //Unit Testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("io.projectreactor:reactor-test")
+    testImplementation("io.projectreactor:reactor-test:3.4.24")
+
     //testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")
     //testImplementation("org.mockito:mockito-core:4.5.1")
     //testImplementation("org.hamcrest:hamcrest:2.2")
@@ -91,17 +100,17 @@ dependencies {
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 
     //MariaDB - SQL Database for storing the tested Proxies
-    runtimeOnly("org.mariadb.jdbc:mariadb-java-client:3.0.4")
+    runtimeOnly("org.mariadb.jdbc:mariadb-java-client:3.1.2")
     //Reflection for Kotlin
-    runtimeOnly("org.jetbrains.kotlin:kotlin-reflect:1.6.21")
+    runtimeOnly("org.jetbrains.kotlin:kotlin-reflect:1.8.0")
 }
 
 tasks.withType<KotlinCompile> {
     kotlinOptions {
         freeCompilerArgs = listOf("-Xjsr305=strict")
-        jvmTarget = "11"
-        apiVersion = "1.6"
-        languageVersion = "1.6"
+        jvmTarget = "18"
+        apiVersion = "1.8"
+        languageVersion = "1.8"
     }
 }
 
@@ -109,7 +118,8 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
+/*
 tasks.withType<BootBuildImage> {
     builder = "paketobuildpacks/builder:tiny"
     environment = mapOf("BP_NATIVE_IMAGE" to "true")
-}
+}*/

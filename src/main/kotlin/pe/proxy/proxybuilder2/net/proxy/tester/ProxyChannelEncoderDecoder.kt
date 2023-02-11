@@ -30,6 +30,8 @@ class ProxyChannelEncoderDecoder(val proxy : ProxyChannelData) {
         val values = intArrayOf(0xFFFFFF, 0x000000, 0xFF00FF, 0x00FF00, 0xFFFF00, 0x00FFFF)
         val readable = buffer.isReadable
 
+        //proxy.response.tls = values.all { buffer.isReadable && buffer.readInt() == it }
+
         //Ensure that the Integers match, if so then set readable to $true
         if(buffer.readableBytes() == values.size * 4) {
             for ((index, value) in values.withIndex()) {
@@ -50,12 +52,13 @@ class ProxyChannelEncoderDecoder(val proxy : ProxyChannelData) {
         //Check if data is readable & ips match, update database entry if proxy is working
         if(readable) {
             if (Utils.ipMatch(proxy.ip, remoteIp)) {
+                val autoReadList = mutableListOf<Boolean>()
+                autoReadList.add(proxy.autoRead)
+
                 val response = proxy.response
                 response.readable = true
                 response.remoteIp = remoteIp
                 response.connected = true
-                val autoReadList = mutableListOf<Boolean>()
-                autoReadList.add(proxy.autoRead)
                 response.autoRead = autoReadList
                 response.endTime = Utils.timestampNow()
             } else {

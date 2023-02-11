@@ -10,7 +10,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.ApplicationListener
 import org.springframework.stereotype.Component
 import pe.proxy.proxybuilder2.database.ProxyRepository
-import pe.proxy.proxybuilder2.monitor.ChecksPerSecond
+import pe.proxy.proxybuilder2.monitor.ChecksMonitor
 import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyDataType
 import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyListData
 import pe.proxy.proxybuilder2.net.proxy.supplier.DatabaseProxySupplier
@@ -76,22 +76,12 @@ class ProxyConnect(val repository : ProxyRepository, val config : ProxyConfig) :
                 Thread.sleep(30000L)
                 initialize()
                 return
-            } catch (t: Throwable) { //Attempt to re-run again after 30 seconds if error is captured
-                retryAttempts++
-                logger.error(t.localizedMessage)
-                Thread.sleep(30000L)
-                initialize()
-                return
             }
         }
         retryAttempts = 0
 
-        val proxies =
-            //Utils.sortByIp(
-            Utils.distinctBadIps(supplierProxyListData.proxies
-                //.filter { it.protocol == "socks5" }.toMutableList()
-                // )
-            ).distinctBy { listOf(it.ip, it.port, it.protocol) }
+        val proxies = Utils.distinctBadIps(supplierProxyListData.proxies)
+            .distinctBy { listOf(it.ip, it.port, it.protocol) }
 
         logger.info("Loaded ${proxies.size}")
 
@@ -113,14 +103,14 @@ class ProxyConnect(val repository : ProxyRepository, val config : ProxyConfig) :
                 proxyDataList.add(ProxyChannelData(proxy.ip, proxy.port, proxy.protocol, "", "",
                     false, endpointServer, ProxyChannelResponseData()))
                 proxyDataList.add(ProxyChannelData(proxy.ip, proxy.port, proxy.protocol, "", "",
-                    false, endpointServer, ProxyChannelResponseData()))
+                    true, endpointServer, ProxyChannelResponseData()))
             }
         }
 
         val listSize = proxyDataList.size
         proxyDataList.shuffled().forEachIndexed { index, proxyData ->
             when { //Every 100 proxies, update the checks per second thread
-                index % 100 == 0 -> { ChecksPerSecond.currentIndex = index; ChecksPerSecond.proxyListSize = listSize }
+                index % 100 == 0 -> { ChecksMonitor.currentIndex = index; ChecksMonitor.proxyListSize = listSize }
             }
             connect(proxyData)
         }

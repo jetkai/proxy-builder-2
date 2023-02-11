@@ -45,8 +45,6 @@ class SQLProxyMonitor(val repository : ProxyRepository, val config : ProxyConfig
             logger.info("Task is not ready")
     } catch (e : Exception) {
         logger.error(e.localizedMessage)
-    } catch (t : Throwable) {
-        logger.error(t.localizedMessage)
     }
 
     //Filters the proxies into a list then calls the "write(proxy)" function

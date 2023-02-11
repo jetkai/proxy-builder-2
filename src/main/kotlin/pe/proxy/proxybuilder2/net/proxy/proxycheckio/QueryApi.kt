@@ -94,8 +94,6 @@ class QueryApi(private val proxyRepository : ProxyRepository,
 
         } catch (e: Exception) {
             logger.error(e.localizedMessage)
-        } catch (t: Throwable) {
-            logger.error(t.localizedMessage)
         }
     }
 

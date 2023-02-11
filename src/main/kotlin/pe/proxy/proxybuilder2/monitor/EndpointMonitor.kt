@@ -28,6 +28,12 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
+/**
+ * EndpointMonitor
+ *
+ * @author Kai
+ * @version 1.0, 25/05/2022
+ */
 @Component
 class EndpointMonitor(val config : ProxyConfig) : ApplicationListener<ApplicationReadyEvent> {
 
@@ -109,8 +115,6 @@ class EndpointMonitor(val config : ProxyConfig) : ApplicationListener<Applicatio
             return connected.get()
         } catch (e: Exception) {
             logger.error(e.localizedMessage)
-        } catch (t: Throwable) {
-            logger.error(t.localizedMessage)
         }
         return false
     }

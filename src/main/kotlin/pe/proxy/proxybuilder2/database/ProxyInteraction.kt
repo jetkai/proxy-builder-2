@@ -52,8 +52,6 @@ class ProxyInteraction(private val repository : ProxyRepository) {
                 }
             } catch (e : Exception) {
                 logger.error(e.localizedMessage)
-            } catch (t : Throwable) {
-                logger.error(t.localizedMessage)
             }
         }
         repository.saveAll(entities)
@@ -105,8 +103,6 @@ class ProxyInteraction(private val repository : ProxyRepository) {
             //proxies.removeIf { listOf(it.ip, it.type, it.port) in copyOfProxies.map { it2 -> listOf(it2.ip, it2.port, it2.type) } }
         } catch (e : Exception) {
             logger.error(e.localizedMessage)
-        } catch (t : Throwable) {
-            logger.error(t.localizedMessage)
         }
         return proxyEntityList
     }
@@ -114,7 +110,7 @@ class ProxyInteraction(private val repository : ProxyRepository) {
     private fun connections(entity : ProxyEntity, proxy : ProxyChannelData) : String {
         val connectDataJson = entity.connections
         var connectData = PerformanceConnectData().default()
-        if(connectDataJson != null && connectDataJson.isNotEmpty())
+        if(!connectDataJson.isNullOrEmpty())
             connectData = KotlinDeserializer.decode(connectDataJson)!!
 
         var endpointData : EndpointServerData ?= null
@@ -166,7 +162,7 @@ class ProxyInteraction(private val repository : ProxyRepository) {
         var protocolData = ProtocolData(defaultData)
         try {
             val protocolsJson = entity.protocols
-            if (protocolsJson != null && protocolsJson.isNotEmpty())
+            if (!protocolsJson.isNullOrEmpty())
                 protocolData = KotlinDeserializer.decode(protocolsJson)!!
 
             if(append) {
@@ -177,8 +173,6 @@ class ProxyInteraction(private val repository : ProxyRepository) {
             }
         } catch (e : Exception) {
             logger.error(e.localizedMessage)
-        } catch (t : Throwable) {
-            logger.error(t.localizedMessage)
         }
 
         return KotlinSerializer.encode(protocolData)

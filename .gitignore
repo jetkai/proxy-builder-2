@@ -5,6 +5,14 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
+### Resources ###
+**/src/main/resources/**
+*.yml
+*.jks
+*.pfx
+*.p12
+proxies/
+
 ### STS ###
 .apt_generated
 .classpath

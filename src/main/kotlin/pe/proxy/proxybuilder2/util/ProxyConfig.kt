@@ -1,7 +1,6 @@
 package pe.proxy.proxybuilder2.util
 
 import org.springframework.boot.context.properties.ConfigurationProperties
-import org.springframework.boot.context.properties.ConstructorBinding
 
 /**
  * ProxyConfig
@@ -9,12 +8,13 @@ import org.springframework.boot.context.properties.ConstructorBinding
  * @author Kai
  * @version 1.0, 15/05/2022
  */
-@ConstructorBinding
+//@ConstructorBinding <- Deprecated in 3.0.0
 @ConfigurationProperties("proxy-config")
 data class ProxyConfig(val outputPath : String, val endpointServers : List<EndpointServer>,
                        val supplier : ProxySupplier, val proxyCheckIo : ProxyCheckIo,
                        val connectAwait : Long, val timeout : Int, val githubList : List<String>,
-                       val enabledThreads : EnabledThreads, val twilio : Twilio) {
+                       val enabledThreads : EnabledThreads, val twilio : Twilio,
+                       val trustPassword : String) {
 
     data class ProxySupplier(val mainUrl : String, val customUrl : String)
 

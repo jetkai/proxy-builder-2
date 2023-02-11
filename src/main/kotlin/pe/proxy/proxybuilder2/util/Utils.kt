@@ -11,6 +11,7 @@ import pe.proxy.proxybuilder2.net.proxy.proxycheckio.PoliciesData
 import pe.proxy.proxybuilder2.net.proxy.proxycheckio.RiskData
 import java.sql.Timestamp
 import java.time.LocalDateTime
+import java.util.*
 import java.util.regex.Pattern
 import kotlin.reflect.KMutableProperty
 import kotlin.reflect.full.memberProperties
@@ -25,6 +26,7 @@ import kotlin.reflect.full.memberProperties
  */
 object Utils {
 
+    val GLOBAL_RANDOM = Random()
     val IS_WINDOWS = System.getProperty("os.name").startsWith("Windows")
 
     fun distinctBadIps(proxies : MutableList<FinalProxyDataType>) : MutableList<FinalProxyDataType> {

@@ -7,6 +7,12 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
+/**
+ * ReadMeFile (ProxyBuilder 1.0)
+ *
+ * @author Kai
+ * @version 1.0, 27/07/2021
+ */
 @Deprecated("Legacy Code - ProxyBuilder 1.0")
 class ReadMeFile(private val config : ProxyConfig) {
 

@@ -63,4 +63,14 @@ class GitActions(private val repository: ProxyRepository,
         logger.info("${stage.name} -> $command")
     }
 
+    enum class GitStage(val command : Array<String>) {
+
+        NOT_RUNNING(emptyArray()),
+        RUNNING(arrayOf("git", "add", ".")),
+        COMMITTING(arrayOf("git", "commit", "-m")),
+        PUSHING(arrayOf("git", "push", "origin", "main")),
+        COMPLETE(emptyArray())
+
+    }
+
 }

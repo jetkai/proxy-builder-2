@@ -2,8 +2,8 @@ package pe.proxy.proxybuilder2.database
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
+import jakarta.persistence.*
 import java.sql.Timestamp
-import javax.persistence.*
 
 /**
  * ProxyEntity
@@ -11,12 +11,13 @@ import javax.persistence.*
  * Serializer/Deserializer placeholder
  * Reserve Name Ref: https://dev.mysql.com/doc/refman/8.0/en/keywords.html#keywords-8-0-detailed-I
  * (Future revision use OneToOne https://www.baeldung.com/jpa-one-to-one & deprecate json)
+ * https://blog.ippon.tech/boost-the-performance-of-your-spring-data-jpa-application/
  *
  * @author Kai
  * @version 1.0, 15/05/2022
  */
 @Entity
-@Table(name = "all_proxies", schema = "prod")
+@Table(name = "all_proxies", schema = "localdb")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 class ProxyEntity {
 

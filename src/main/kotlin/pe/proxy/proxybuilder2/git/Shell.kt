@@ -1,6 +1,6 @@
 package pe.proxy.proxybuilder2.git
 
-import com.sun.istack.logging.Logger
+import org.slf4j.LoggerFactory
 import pe.proxy.proxybuilder2.util.ProxyConfig
 import pe.proxy.proxybuilder2.util.Utils
 
@@ -12,7 +12,7 @@ import pe.proxy.proxybuilder2.util.Utils
  */
 class Shell(val config : ProxyConfig) {
 
-    private val logger = Logger.getLogger(Shell::class.java)
+    private val logger = LoggerFactory.getLogger(Shell::class.java)
 
     fun parseCommand(gitArguments : Array<String>) {
 
