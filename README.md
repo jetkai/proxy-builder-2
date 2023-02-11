@@ -1,12 +1,13 @@
 ###### Proxy Builder 2.0
 
-## Minimum Requirements: 
+## Requirements: 
 
-- ✅ IntelliJ 2020
-- ✅ JDK 8
-- ✅ Kotlin 1.5.0
-- ✅ Internet
+- ✅ IntelliJ IDEA
+- ✅ JDK 18
+- ✅ Kotlin 1.8.0
+- ✅ Internet Connection
 - ✅ MariaDB (or another SQL alternative)
+- ✅ 100MB Storage
 
 ## New features currently include:
 - Location data
