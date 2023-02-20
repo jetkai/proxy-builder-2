@@ -3,8 +3,8 @@ package pe.proxy.proxybuilder2.net.proxy.supplier
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
-import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyDataType
-import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyListData
+import pe.proxy.proxybuilder2.net.proxy.data.SimpleProxyDataList
+import pe.proxy.proxybuilder2.net.proxy.data.SimpleProxyDataType
 import pe.proxy.proxybuilder2.net.proxy.data.SupplierProxyListData
 import pe.proxy.proxybuilder2.util.ProxyConfig
 import java.net.URI
@@ -19,7 +19,7 @@ import java.time.Duration
  * @author Kai
  * @version 1.0, 15/05/2022
  */
-class CustomProxySupplier(override val data : FinalProxyListData, appConfig : ProxyConfig) : IProxySupplier {
+class CustomProxySupplier(override val data : SimpleProxyDataList, appConfig : ProxyConfig) : IProxySupplier {
 
     private val logger = LoggerFactory.getLogger(CustomProxySupplier::class.java)
 
@@ -57,7 +57,7 @@ class CustomProxySupplier(override val data : FinalProxyListData, appConfig : Pr
                     continue
                 val ip = proxy.split(":")[0]
                 val port = proxy.split(":")[1]
-                this.data.proxies.add(FinalProxyDataType(key, ip, port.toInt()))
+                this.data.proxies[ip] = SimpleProxyDataType(key, ip, port.toInt())
             }
         }
 

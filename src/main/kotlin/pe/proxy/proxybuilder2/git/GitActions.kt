@@ -21,23 +21,26 @@ import java.util.concurrent.TimeUnit
  * @version 1.0, 19/05/2022
  */
 @Component
-class GitActions(private val repository: ProxyRepository,
-                 private val config : ProxyConfig) : ApplicationListener<ApplicationReadyEvent> {
+class GitActions(
+    private val repository: ProxyRepository,
+    private val config: ProxyConfig,
+) : ApplicationListener<ApplicationReadyEvent> {
 
     private val logger = LoggerFactory.getLogger(GitActions::class.java)
 
     private val shell = Shell(config)
 
-    private val executor : ScheduledExecutorService = Executors.newScheduledThreadPool(2)
+    private val executor : ScheduledExecutorService = Executors.newScheduledThreadPool(
+        Runtime.getRuntime().availableProcessors() + 1)
 
     override fun onApplicationEvent(event : ApplicationReadyEvent) {
-        executor.scheduleAtFixedRate({ initialize() },20,90, TimeUnit.MINUTES)
+        executor.scheduleAtFixedRate({ initialize() },50,90, TimeUnit.MINUTES)
     }
 
     fun initialize() {
         Tasks.thread.gitActions?.let { Tasks.thread.pauseAllExcept(it) }
         //Heavy task, requesting other threads to pause until this task has been completed
-        CustomFileWriter(repository, config).initialize()
+        CustomFileWriter(repository, config, executor).initialize()
 
         Tasks.thread.resumeAll()
 

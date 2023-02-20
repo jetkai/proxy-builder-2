@@ -14,7 +14,7 @@ data class ProxyConfig(val outputPath : String, val endpointServers : List<Endpo
                        val supplier : ProxySupplier, val proxyCheckIo : ProxyCheckIo,
                        val connectAwait : Long, val timeout : Int, val githubList : List<String>,
                        val enabledThreads : EnabledThreads, val twilio : Twilio,
-                       val trustPassword : String) {
+                       val trustPassword : String, val threads : Int) {
 
     data class ProxySupplier(val mainUrl : String, val customUrl : String)
 

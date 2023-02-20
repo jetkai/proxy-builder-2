@@ -32,18 +32,18 @@ data class SupplierProxyListData(val http : MutableList<String>, val https : Mut
 }
 
 @Serializable
-data class FinalProxyListData(val proxies : MutableList<FinalProxyDataType>) {
-    fun size(type : String) = proxies.filter { it.protocol == type }.size
+data class SimpleProxyDataList(val proxies : MutableMap<String, SimpleProxyDataType>) {
+    fun size(protocol : String) : Int = proxies.filter { it.value.protocol == protocol }.size
+
 }
 
 @Serializable
-data class FinalProxyDataType(val protocol : String, val ip : String, val port : Int)
+data class SimpleProxyDataType(val protocol : String, val ip : String, val port : Int)
 
 @Serializable
 data class PerformanceConnectData(val aws_NA : EndpointServerData?=null, val ora_UK : EndpointServerData?=null,
                                   val ora_JP : EndpointServerData?=null, val ms_HK : EndpointServerData?=null) {
-    fun default() : PerformanceConnectData =
-        PerformanceConnectData(
+    fun default() : PerformanceConnectData = PerformanceConnectData(
             EndpointServerData().default(), EndpointServerData().default(),
             EndpointServerData().default(), EndpointServerData().default()
         )
@@ -53,8 +53,7 @@ data class PerformanceConnectData(val aws_NA : EndpointServerData?=null, val ora
 @Serializable
 data class EndpointServerData(var ping : Long?=null, val connections : ConnectionAttempts?=null,
                               var uptime : String?=null) {
-    fun default(): EndpointServerData =
-        EndpointServerData(0, ConnectionAttempts(0, 0), "0%")
+    fun default() : EndpointServerData = EndpointServerData(0, ConnectionAttempts(0, 0), "0%")
 }
 
 @Serializable

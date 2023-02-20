@@ -3,8 +3,8 @@ package pe.proxy.proxybuilder2.util
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.JsonToken
 import pe.proxy.proxybuilder2.database.ProxyEntity
-import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyDataType
 import pe.proxy.proxybuilder2.net.proxy.data.PerformanceConnectData
+import pe.proxy.proxybuilder2.net.proxy.data.SimpleProxyDataType
 import pe.proxy.proxybuilder2.net.proxy.proxycheckio.LocationData
 import pe.proxy.proxybuilder2.net.proxy.proxycheckio.OperatorData
 import pe.proxy.proxybuilder2.net.proxy.proxycheckio.PoliciesData
@@ -29,7 +29,7 @@ object Utils {
     val GLOBAL_RANDOM = Random()
     val IS_WINDOWS = System.getProperty("os.name").startsWith("Windows")
 
-    fun distinctBadIps(proxies : MutableList<FinalProxyDataType>) : MutableList<FinalProxyDataType> {
+    fun distinctBadIps(proxies: MutableCollection<SimpleProxyDataType>) : MutableCollection<SimpleProxyDataType> {
         val pattern = Pattern.compile("^((\\d|[1-9]\\d|1\\d\\d|2[0-4]\\d|25[0-5])(\\.(?!$)|$)){4}$")
         proxies.removeIf { !pattern.matcher(it.ip).matches() }
         return proxies

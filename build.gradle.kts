@@ -5,9 +5,9 @@ plugins {
     id("io.spring.dependency-management") version "1.1.0"
     //id("org.springframework.experimental.aot") version "0.11.5" //(LOGGING BUG)
 
-    kotlin("jvm") version "1.8.0"
-    kotlin("plugin.spring") version "1.8.0"
-    kotlin("plugin.serialization") version "1.8.0"
+    kotlin("jvm") version "1.8.10"
+    kotlin("plugin.spring") version "1.8.10"
+    kotlin("plugin.serialization") version "1.8.10"
 }
 
 group = "pe.proxy"
@@ -102,7 +102,7 @@ dependencies {
     //MariaDB - SQL Database for storing the tested Proxies
     runtimeOnly("org.mariadb.jdbc:mariadb-java-client:3.1.2")
     //Reflection for Kotlin
-    runtimeOnly("org.jetbrains.kotlin:kotlin-reflect:1.8.0")
+    runtimeOnly("org.jetbrains.kotlin:kotlin-reflect:1.8.10")
 }
 
 tasks.withType<KotlinCompile> {

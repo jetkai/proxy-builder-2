@@ -3,11 +3,14 @@ package pe.proxy.proxybuilder2.net.proxy.supplier
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
-import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyDataType
-import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyListData
+import pe.proxy.proxybuilder2.net.proxy.data.SimpleProxyDataList
+import pe.proxy.proxybuilder2.net.proxy.data.SimpleProxyDataType
 import pe.proxy.proxybuilder2.net.proxy.data.SupplierProxyListData
 import pe.proxy.proxybuilder2.util.ProxyConfig
+import pe.proxy.proxybuilder2.util.Utils
 import java.io.File
+import java.nio.file.Path
+import java.nio.file.Paths
 
 /**
  * LocalProxySupplier
@@ -15,7 +18,7 @@ import java.io.File
  * @author Kai
  * @version 1.0, 15/05/2022
  */
-class LocalProxySupplier(override val data : FinalProxyListData, appConfig : ProxyConfig) : IProxySupplier {
+class LocalProxySupplier(override val data : SimpleProxyDataList, appConfig : ProxyConfig) : IProxySupplier {
 
     private val logger = LoggerFactory.getLogger(LocalProxySupplier::class.java)
 
@@ -32,7 +35,13 @@ class LocalProxySupplier(override val data : FinalProxyListData, appConfig : Pro
 
         val parsed = SupplierProxyListData(mutableListOf(), mutableListOf(), mutableListOf(), mutableListOf())
 
-        File("proxies/").listFiles()?.forEach {
+        val path: Path = if(Utils.IS_WINDOWS) {
+            Paths.get("proxies/")
+        } else {
+            Paths.get("/home/proxybuilder/IntelliJProjects/proxy-builder-2/proxies/")
+        }
+
+        File(path.toUri()).listFiles()?.forEach {
             if(it.extension.contains("json")) {
                 val prox = it?.readText()?.let { it1 -> data.decodeFromString<SupplierProxyListData>(it1) }
                 if(prox != null) {
@@ -51,13 +60,15 @@ class LocalProxySupplier(override val data : FinalProxyListData, appConfig : Pro
         hashMap["socks4"] = parsed.socks4
         hashMap["socks5"] = parsed.socks5
 
+
+
         for ((key, proxyList) in hashMap) {
             for(proxy in proxyList) {
                 if(!proxy.contains(":") || proxy.length > 23)
                     continue
                 val ip = proxy.split(":")[0]
                 val port = proxy.split(":")[1]
-                this.data.proxies.add(FinalProxyDataType(key, ip, port.toInt()))
+                this.data.proxies[ip] = SimpleProxyDataType(key, ip, port.toInt())
             }
         }
 

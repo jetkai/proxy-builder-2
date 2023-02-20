@@ -25,8 +25,13 @@ interface ProxyRepository : CrudRepository<ProxyEntity, String> {
 
     fun findByLocationIsNotNullAndLastSuccessIsNotNull() : List<ProxyEntity>
 
+    fun findByIpInAndLastSuccessBefore(ip : List<String>, timestamp : Timestamp) : List<ProxyEntity>
+    fun findByLastSuccessIsNullAndLastTestedBefore(lastTestedBefore : Timestamp): List<ProxyEntity>
+
     //@Override
     //@Cacheable("ProxyRepository_lastSuccess")
     fun findByLastSuccessAfter(timestamp : Timestamp) : List<ProxyEntity>
+
+    fun findByLastSuccessIsNotNull() : List<ProxyEntity>
 
 }

@@ -22,6 +22,7 @@ import pe.proxy.proxybuilder2.util.ProxyConfig
 import pe.proxy.proxybuilder2.util.Utils
 import java.io.File
 import java.nio.file.Files
+import java.util.concurrent.ScheduledExecutorService
 
 /**
  * CustomFileWriter
@@ -29,7 +30,8 @@ import java.nio.file.Files
  * @author Kai
  * @version 1.0, 24/05/2022
  */
-class CustomFileWriter(private val repository : ProxyRepository, private val config : ProxyConfig)  {
+class CustomFileWriter(private val repository : ProxyRepository, private val config : ProxyConfig,
+                       private val executor : ScheduledExecutorService)  {
 
     private val logger = LoggerFactory.getLogger(CustomFileWriter::class.java)
 
@@ -37,7 +39,7 @@ class CustomFileWriter(private val repository : ProxyRepository, private val con
         try {
             val lastOnlineSince = Utils.timestampMinus(90) //Within the past 90 minutes
             val lastOnlineSinceProxies = Utils.sortByIp(repository.findByLastSuccessAfter(lastOnlineSince))
-            val archiveProxies = Utils.sortByIp(repository.findAll().toList())
+            val archiveProxies = Utils.sortByIp(repository.findByLastSuccessIsNotNull())
 
             logger.info("Gathering last online since $lastOnlineSince")
 
@@ -49,28 +51,43 @@ class CustomFileWriter(private val repository : ProxyRepository, private val con
             if(archiveProxies.isEmpty() || lastOnlineSinceProxies.isEmpty())
                 return
 
+            val tasks = mutableListOf<Runnable>()
             ViewType.values().forEach { viewType ->
                 when (viewType) {
                     ViewType.CLASSIC -> {
-                        val proxies = convertClassic(lastOnlineSinceProxies, viewType)
-                        for (fileExtension in FileExtension.values())
-                            write(proxies, viewType, fileExtension)
+                        val task = Runnable {
+                            val proxies = convertClassic(lastOnlineSinceProxies, viewType)
+                            for (fileExtension in FileExtension.values())
+                                write(proxies, viewType, fileExtension)
+                        }
+                        tasks.add(task)
                     }
                     ViewType.ARCHIVE -> {
-                        val proxies = convert(archiveProxies, viewType)
-                        val classicArchive = convertClassic(archiveProxies, viewType)
-                        for (fileExtension in FileExtension.values()) {
-                            write(proxies, viewType, fileExtension)
-                            write(classicArchive, viewType, fileExtension)
+                        val task = Runnable {
+                            val proxies = convert(archiveProxies, viewType)
+                            val classicArchive = convertClassic(archiveProxies, viewType)
+                            for (fileExtension in FileExtension.values()) {
+                                write(proxies, viewType, fileExtension)
+                                write(classicArchive, viewType, fileExtension)
+                            }
                         }
+                        tasks.add(task)
                     }
                     ViewType.BASIC, ViewType.ADVANCED -> {
-                        val proxies = convert(lastOnlineSinceProxies, viewType)
-                        for (fileExtension in FileExtension.values())
-                            write(proxies, viewType, fileExtension)
+                        val task = Runnable {
+                            val proxies = convert(lastOnlineSinceProxies, viewType)
+                            for (fileExtension in FileExtension.values())
+                                write(proxies, viewType, fileExtension)
+                        }
+                        tasks.add(task)
                     }
                 }
             }
+
+            //Multi-thread the tasks to make it so the application doesn't stall, then wait for the tasks to complete
+            tasks.map { executor.submit(it) }.forEach { it.get() }
+
+            logger.info("Completed a heavy task within the CustomFileWriter")
 
             //Deprecated TODO - Update ReadMe Builder
             ReadMeFile(config).create(convert(lastOnlineSinceProxies, ViewType.ADVANCED), archiveProxies)

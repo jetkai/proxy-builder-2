@@ -55,6 +55,16 @@ data class EntityForPublicView(
     //Temp deserializer (for testing) - this is currently hybrid with KTX & Jackson - Bad
     //Jackson doesn't parse KTX string decode properly, not sure how to parse KTX JsonElement to Jackson ATM
     @JsonIgnore
+    fun minimal(proxy : ProxyEntity) : EntityForPublicView {
+        ip = proxy.ip
+        port = proxy.port
+        protocols = KotlinDeserializer.decode<ProtocolData?>(proxy.protocols!!)?.protocol
+        return this
+    }
+
+    //Temp deserializer (for testing) - this is currently hybrid with KTX & Jackson - Bad
+    //Jackson doesn't parse KTX string decode properly, not sure how to parse KTX JsonElement to Jackson ATM
+    @JsonIgnore
     fun basic(proxy : ProxyEntity) : EntityForPublicView {
         ip = proxy.ip
         port = proxy.port

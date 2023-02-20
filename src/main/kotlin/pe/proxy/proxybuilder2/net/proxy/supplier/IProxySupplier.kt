@@ -1,6 +1,6 @@
 package pe.proxy.proxybuilder2.net.proxy.supplier
 
-import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyListData
+import pe.proxy.proxybuilder2.net.proxy.data.SimpleProxyDataList
 
 /**
  * IProxySupplier
@@ -10,7 +10,7 @@ import pe.proxy.proxybuilder2.net.proxy.data.FinalProxyListData
  */
 interface IProxySupplier {
 
-    val data : FinalProxyListData
+    val data : SimpleProxyDataList
     fun request() : IProxySupplier
     fun parse()
 

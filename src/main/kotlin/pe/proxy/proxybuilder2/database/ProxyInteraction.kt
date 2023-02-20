@@ -93,7 +93,7 @@ class ProxyInteraction(private val repository : ProxyRepository) {
 
             //New Proxies (that do not exist within database)
             copyOfProxies.filter { it.ip !in repositoryList.map { repo -> repo.ip } }
-                .filter { it.response.connected == true } //Only add proxies that have successfully connected
+                //.filter { it.response.connected == true } //Only add proxies that have successfully connected
                 .mapTo(proxyEntityList) { EntityChannelData(getDefaultTemplate(it.ip, it.port), it) }
 
             //Keep this as proxies.removeIf and not proxiesCopy, so we can remove the ones we have added to DB

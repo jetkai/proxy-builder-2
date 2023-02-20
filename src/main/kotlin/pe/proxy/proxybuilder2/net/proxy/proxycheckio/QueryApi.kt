@@ -42,7 +42,7 @@ class QueryApi(private val proxyRepository : ProxyRepository,
     override fun onApplicationEvent(event : ApplicationReadyEvent) {
         //Runs query() every minute
         if(config.enabledThreads.queryApi)
-            executor.scheduleAtFixedRate({ initialize() }, 0, 1, TimeUnit.MINUTES)
+            executor.scheduleAtFixedRate({ initialize() }, 15, 45, TimeUnit.SECONDS)
     }
 
     fun initialize() {
