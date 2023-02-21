@@ -22,7 +22,6 @@ import pe.proxy.proxybuilder2.util.ProxyConfig
 import pe.proxy.proxybuilder2.util.Utils
 import java.io.File
 import java.nio.file.Files
-import java.util.concurrent.ScheduledExecutorService
 
 /**
  * CustomFileWriter
@@ -30,8 +29,7 @@ import java.util.concurrent.ScheduledExecutorService
  * @author Kai
  * @version 1.0, 24/05/2022
  */
-class CustomFileWriter(private val repository : ProxyRepository, private val config : ProxyConfig,
-                       private val executor : ScheduledExecutorService)  {
+class CustomFileWriter(private val repository : ProxyRepository, private val config : ProxyConfig)  {
 
     private val logger = LoggerFactory.getLogger(CustomFileWriter::class.java)
 
@@ -55,37 +53,37 @@ class CustomFileWriter(private val repository : ProxyRepository, private val con
             ViewType.values().forEach { viewType ->
                 when (viewType) {
                     ViewType.CLASSIC -> {
-                        val task = Runnable {
+                     //   val task = Runnable {
                             val proxies = convertClassic(lastOnlineSinceProxies, viewType)
                             for (fileExtension in FileExtension.values())
                                 write(proxies, viewType, fileExtension)
-                        }
-                        tasks.add(task)
+                      //  }
+                     //   tasks.add(task)
                     }
                     ViewType.ARCHIVE -> {
-                        val task = Runnable {
+                     //   val task = Runnable {
                             val proxies = convert(archiveProxies, viewType)
                             val classicArchive = convertClassic(archiveProxies, viewType)
                             for (fileExtension in FileExtension.values()) {
                                 write(proxies, viewType, fileExtension)
                                 write(classicArchive, viewType, fileExtension)
                             }
-                        }
-                        tasks.add(task)
+                      //  }
+                      //  tasks.add(task)
                     }
                     ViewType.BASIC, ViewType.ADVANCED -> {
-                        val task = Runnable {
+                      //  val task = Runnable {
                             val proxies = convert(lastOnlineSinceProxies, viewType)
                             for (fileExtension in FileExtension.values())
                                 write(proxies, viewType, fileExtension)
-                        }
-                        tasks.add(task)
+                       // }
+                        //tasks.add(task)
                     }
                 }
             }
 
             //Multi-thread the tasks to make it so the application doesn't stall, then wait for the tasks to complete
-            tasks.map { executor.submit(it) }.forEach { it.get() }
+            //tasks.map { executor.submit(it) }.forEach { it.get() }
 
             logger.info("Completed a heavy task within the CustomFileWriter")
 
@@ -115,6 +113,7 @@ class CustomFileWriter(private val repository : ProxyRepository, private val con
         return proxies
     }
 
+    @Throws
     private fun write(proxies : List<EntityForPublicView>, viewType: ViewType, extension : FileExtension) {
         var file = fileBuilder("proxies-${viewType.name.lowercase()}", extension, viewType)
 
@@ -142,6 +141,8 @@ class CustomFileWriter(private val repository : ProxyRepository, private val con
             return
         }
 
+        logger.info("Extension: $extension")
+
         val mapper = mapper(extension)
             ?.setSerializationInclusion(JsonInclude.Include.NON_NULL)
             ?.enable(SerializationFeature.INDENT_OUTPUT)
@@ -164,7 +165,10 @@ class CustomFileWriter(private val repository : ProxyRepository, private val con
         mapper.writeValue(file, proxies)
     }
 
-    private fun write(proxies : SupplierProxyListData, viewType: ViewType, extension : FileExtension) {
+    private fun write(proxies : SupplierProxyListData, viewType: ViewType, extension : FileExtension?) {
+        if(extension == null) {
+            return
+        }
         val file = fileBuilder("proxies", extension, viewType)
         if (file.lastModified() >= Utils.timestampMinus(30).time) //Prevent overwriting file within 60 mins
             return
@@ -217,7 +221,10 @@ class CustomFileWriter(private val repository : ProxyRepository, private val con
     }
 
     @Throws
-    fun mapper(extension : FileExtension) : ObjectMapper? {
+    fun mapper(extension : FileExtension?) : ObjectMapper? {
+        if(extension == null) {
+            return null
+        }
         return when (extension) {
             FileExtension.YAML -> { ObjectMapper(YAMLFactory()) }
             FileExtension.JSON -> { ObjectMapper(JsonFactory()) }
@@ -243,8 +250,8 @@ class CustomFileWriter(private val repository : ProxyRepository, private val con
         return File(filePath) //Final Path
     }
 
-    enum class ViewType { CLASSIC, BASIC, ADVANCED, ARCHIVE; }
+    enum class ViewType { CLASSIC, BASIC, ADVANCED, ARCHIVE }
 
-    enum class FileExtension { TXT, JSON, YAML, XML, CSV; }
+    enum class FileExtension { TXT, JSON, YAML, XML, CSV }
 
 }

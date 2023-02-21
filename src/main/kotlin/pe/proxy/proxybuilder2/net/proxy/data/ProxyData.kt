@@ -51,7 +51,7 @@ data class PerformanceConnectData(val aws_NA : EndpointServerData?=null, val ora
 }
 
 @Serializable
-data class EndpointServerData(var ping : Long?=null, val connections : ConnectionAttempts?=null,
+data class EndpointServerData(var ping : Long?=0L, val connections : ConnectionAttempts?=null,
                               var uptime : String?=null) {
     fun default() : EndpointServerData = EndpointServerData(0, ConnectionAttempts(0, 0), "0%")
 }

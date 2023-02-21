@@ -28,14 +28,14 @@ class SQLProxyMonitor(val repository : ProxyRepository, val config : ProxyConfig
 
     private val logger = LoggerFactory.getLogger(SQLProxyMonitor::class.java)
 
-    private val executor : ScheduledExecutorService = Executors.newScheduledThreadPool(4)
+    private val executor : ScheduledExecutorService = Executors.newScheduledThreadPool(2)
 
     private val running = Tasks.thread.sqlProxyMonitor?.running!!
     private val pause = Tasks.thread.proxyConnect?.pause!!
 
     override fun onApplicationEvent(event: ApplicationReadyEvent) {
         if(config.enabledThreads.sqlProxyMonitor)
-            executor.scheduleAtFixedRate( { initialize() }, 5, 5, TimeUnit.SECONDS )
+            executor.scheduleAtFixedRate( { initialize() }, 1, 1, TimeUnit.SECONDS )
     }
 
     fun initialize() = try {

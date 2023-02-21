@@ -51,6 +51,7 @@ class ProxyController(private val repository : ProxyRepository, cacheManager : C
     @RequestMapping(value = ["running"], produces = ["application/json"], method = [RequestMethod.GET])
     private fun onRunningCheck() : ResponseEntity<Any> = ResponseEntity<Any>("HELLO", HttpStatus.OK)
 
+    @Throws
     @RequestMapping(value = ["proxies"], produces = ["application/json"], method = [RequestMethod.GET])
     private fun onRequestForOnlineProxies(
         @RequestParam(value = "protocols", required = false, defaultValue = "any") protocols : List<String>,
@@ -63,19 +64,19 @@ class ProxyController(private val repository : ProxyRepository, cacheManager : C
 
         //Grab the latest list of proxies
         //Clone list so that we do not modify the existing list in the cache
-        var cachedProxies : MutableList<EntityForPublicView>? = getProxiesFromCache().toMutableList()
+        var cachedProxies : MutableList<EntityForPublicView> = getProxiesFromCache().toMutableList()
 
         val allowedTypes = arrayOf("classic", "basic", "advanced")
         if(!allowedTypes.contains(type))
             return ResponseEntity<Any>("Bad type.", HttpStatus.OK)
 
         //HANDLE -> Basic & Advanced Format (MutableList<EntityForPublicView>)
-        if(!cachedProxies.isNullOrEmpty()) {
+        if(cachedProxies.isNotEmpty()) {
 
             //Only get protocols specified
             if (protocols.isNotEmpty() && !protocols.contains("any")) {
                 cachedProxies = protocols.flatMap { prot ->
-                    cachedProxies!!.filter { prox ->
+                    cachedProxies.filter { prox ->
                         prox.protocols?.any { it.type == prot } == true
                     }
                 }.toMutableList()
@@ -84,7 +85,7 @@ class ProxyController(private val repository : ProxyRepository, cacheManager : C
             //Filter only the countries the user has specified
             if (countries.isNotEmpty() && !countries.contains("any"))
                 cachedProxies = countries.flatMap { country ->
-                    cachedProxies!!.filter { prox ->
+                    cachedProxies.filter { prox ->
                         if (country.length == 2) //ISOCode is 2 chars long
                             prox.location?.isocode?.lowercase() == country.lowercase()
                         else

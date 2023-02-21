@@ -32,6 +32,7 @@ class DatabaseProxySupplier(
         return this
     }
 
+    @Throws
     override fun parse() {
         val proxies = mutableListOf<EntityForPublicView>()
 

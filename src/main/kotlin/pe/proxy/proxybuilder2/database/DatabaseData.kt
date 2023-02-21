@@ -58,7 +58,7 @@ data class EntityForPublicView(
     fun minimal(proxy : ProxyEntity) : EntityForPublicView {
         ip = proxy.ip
         port = proxy.port
-        protocols = KotlinDeserializer.decode<ProtocolData?>(proxy.protocols!!)?.protocol
+        protocols = KotlinDeserializer.decode<ProtocolData?>(proxy.protocols)?.protocol
         return this
     }
 
@@ -68,8 +68,8 @@ data class EntityForPublicView(
     fun basic(proxy : ProxyEntity) : EntityForPublicView {
         ip = proxy.ip
         port = proxy.port
-        protocols = KotlinDeserializer.decode<ProtocolData?>(proxy.protocols!!)?.protocol
-        ping = KotlinDeserializer.decode<PerformanceConnectData?>(proxy.connections!!)?.let { Utils.lowestPing(it) }
+        protocols = KotlinDeserializer.decode<ProtocolData?>(proxy.protocols)?.protocol
+        ping = KotlinDeserializer.decode<PerformanceConnectData?>(proxy.connections)?.let { Utils.lowestPing(it) }
         return this
     }
 

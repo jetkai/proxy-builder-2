@@ -49,7 +49,7 @@ class ChecksMonitor(private val config : ProxyConfig) : ApplicationListener<Appl
             "%d:%02d:%02d", remainingAmount / 3600, remainingAmount % 3600 / 60, remainingAmount % 60)
 
         logger.info("Time Remaining[$remainingTime] CPS[$checksPerSecond], ListSize[$proxyListSize]," +
-                " Tested[$currentIndex], Remaining[$remaining]")
+                " Tested[$currentIndex], Remaining[$remaining]\r")
     }
 
 }

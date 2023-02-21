@@ -36,7 +36,7 @@ class ProxyChannelHandler(private val encoderDecoder : ProxyChannelEncoderDecode
         if(evt is IdleStateEvent) {
             val state = evt.state()
             if(state == IdleState.ALL_IDLE) {
-                logger.info("State is idle, closing connection")
+                //logger.info("State is idle, closing connection")
                 ctx.close()
             }
         } else
@@ -68,7 +68,7 @@ class ProxyChannelHandler(private val encoderDecoder : ProxyChannelEncoderDecode
             existingConnection = true
 
         flushAndClose(ctx)
-        logger.warn(cause.localizedMessage)
+        //logger.warn(cause.localizedMessage)
     }
 
     private fun flushAndClose(ctx : ChannelHandlerContext) {

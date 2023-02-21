@@ -76,9 +76,9 @@ class ProxyInteraction(private val repository : ProxyRepository) {
     //Might be very heavy on resources, will test - May be better to update as a single entity
     fun getProxyEntities(proxies : ConcurrentLinkedQueue<ProxyChannelData>) : List<EntityChannelData> {
         //Make copyOfProxies - otherwise we are out of sync when comparing
-        val copyOfProxies = proxies.distinctBy { it.ip }.toMutableList()
-
+        val copyOfProxies = proxies.distinctBy { it.ip }
         val proxyEntityList = mutableListOf<EntityChannelData>()
+
         try {
             val listIps = copyOfProxies.map { it.ip }.distinct()
             val repositoryList = repository.findByIpIn(listIps)
@@ -97,9 +97,7 @@ class ProxyInteraction(private val repository : ProxyRepository) {
                 .mapTo(proxyEntityList) { EntityChannelData(getDefaultTemplate(it.ip, it.port), it) }
 
             //Keep this as proxies.removeIf and not proxiesCopy, so we can remove the ones we have added to DB
-            logger.info("TESTING SIZE0: ${proxies.size}")
             proxies.removeAll(copyOfProxies.toSet())
-            logger.info("TESTING SIZE1: ${proxies.size}")
             //proxies.removeIf { listOf(it.ip, it.type, it.port) in copyOfProxies.map { it2 -> listOf(it2.ip, it2.port, it2.type) } }
         } catch (e : Exception) {
             logger.error(e.localizedMessage)
@@ -107,11 +105,13 @@ class ProxyInteraction(private val repository : ProxyRepository) {
         return proxyEntityList
     }
 
+    @Throws
     private fun connections(entity : ProxyEntity, proxy : ProxyChannelData) : String {
         val connectDataJson = entity.connections
-        var connectData = PerformanceConnectData().default()
-        if(!connectDataJson.isNullOrEmpty())
-            connectData = KotlinDeserializer.decode(connectDataJson)!!
+        var connectData = KotlinDeserializer.decode<PerformanceConnectData>(connectDataJson)
+        if(connectData == null) {
+            connectData = PerformanceConnectData().default()
+        }
 
         var endpointData : EndpointServerData ?= null
 
@@ -155,24 +155,22 @@ class ProxyInteraction(private val repository : ProxyRepository) {
         return null
     }
 
+    @Throws
     private fun protocols(entity : ProxyEntity, proxy : ProxyChannelData, append : Boolean) : String {
         val defaultData = mutableListOf(
             ProtocolDataType(proxy.type, proxy.port, proxy.response.tls, proxy.response.autoRead)
         )
-        var protocolData = ProtocolData(defaultData)
-        try {
-            val protocolsJson = entity.protocols
-            if (!protocolsJson.isNullOrEmpty())
-                protocolData = KotlinDeserializer.decode(protocolsJson)!!
+        val protocolsJson = entity.protocols
+        var protocolData = KotlinDeserializer.decode<ProtocolData>(protocolsJson)
+        if (protocolData == null) {
+            protocolData = ProtocolData(defaultData)
+        }
 
-            if(append) {
-                val protocol = protocolData.protocol
-                val protocolIsNotInList = protocol.none { it.port == proxy.port && it.type == proxy.type }
-                if (protocolIsNotInList)
-                    protocol.add(ProtocolDataType(proxy.type, proxy.port, proxy.response.tls, proxy.response.autoRead))
-            }
-        } catch (e : Exception) {
-            logger.error(e.localizedMessage)
+        if(append) {
+            val protocol = protocolData.protocol
+            val protocolIsNotInList = protocol.none { it.port == proxy.port && it.type == proxy.type }
+            if (protocolIsNotInList)
+                protocol.add(ProtocolDataType(proxy.type, proxy.port, proxy.response.tls, proxy.response.autoRead))
         }
 
         return KotlinSerializer.encode(protocolData)

@@ -38,11 +38,10 @@ class CustomProxySupplier(override val data : SimpleProxyDataList, appConfig : P
 
     //TODO Modify parsing for CustomProxySupplier
     override fun parse() {
-        if(unparsed == null)
-            return logger.error("Unable to read unparsed body data from supplier")
+        val unparsed = this.unparsed ?: return logger.error("Unable to read unparsed body data from supplier")
 
         val data = Json { this.encodeDefaults = true; this.ignoreUnknownKeys = true }
-        val parsed = data.decodeFromString<SupplierProxyListData>(unparsed!!)
+        val parsed = data.decodeFromString<SupplierProxyListData>(unparsed)
 
         val hashMap = HashMap<String, MutableList<String>>()
 

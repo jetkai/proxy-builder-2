@@ -37,9 +37,9 @@ class MainProxySupplier(override val data : SimpleProxyDataList, appConfig: Prox
     }
 
     override fun parse() {
-
+        val unparsed = this.unparsed ?: return
         val data = Json { this.encodeDefaults = true; this.ignoreUnknownKeys = true }
-        val parsed = data.decodeFromString<SupplierProxyListData>(unparsed!!)
+        val parsed = data.decodeFromString<SupplierProxyListData>(unparsed)
 
         val hashMap = HashMap<String, MutableList<String>>()
 

@@ -91,11 +91,22 @@ object Utils {
     }
 
     fun lowestPing(connectionData : PerformanceConnectData) : Long {
-        val pingArray = listOf(
-            connectionData.aws_NA?.ping!!, connectionData.ms_HK?.ping!!,
-            connectionData.ora_JP?.ping!!, connectionData.ora_UK?.ping!!,
-        )
-        return pingArray.filter { it != 0L }.minOf { it }
+//        val pingArray = listOf(
+//            connectionData.aws_NA?.ping, connectionData.ms_HK?.ping,
+//            connectionData.ora_JP?.ping, connectionData.ora_UK?.ping,
+//        )
+        //Below code fixes bug that causes lowestPing to return null instead of Long
+        val pingArray = mutableListOf<Long>()
+        connectionData.aws_NA?.ping?.let { pingArray.add(it) }
+        connectionData.ms_HK?.ping?.let { pingArray.add(it) }
+        connectionData.ora_JP?.ping?.let { pingArray.add(it) }
+        connectionData.ora_UK?.ping?.let { pingArray.add(it) }
+        val pings = pingArray.filter { it != 0L }
+        return if (pings.isNotEmpty()) {
+            pings.minOf { it }
+        } else {
+            0L
+        }
     }
 
     //Custom Serializer - What could go wrong :)

@@ -62,7 +62,8 @@ class QueryApi(private val proxyRepository : ProxyRepository,
             val entities = entitiesFromRepository.subList(0, maxSize) //Max 100 so that we don't overload the API
 
             for (entity in entities) {
-                val request = builder.uri(apiURI(entity.ip!!)) //Impossible for entity.ip to be null
+                val entityIp = entity.ip ?: continue
+                val request = builder.uri(apiURI(entityIp)) //Impossible for entity.ip to be null
                     .GET()
                     .timeout(Duration.ofSeconds(5))
                     .build()

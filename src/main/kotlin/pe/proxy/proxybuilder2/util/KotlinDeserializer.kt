@@ -16,9 +16,9 @@ object KotlinDeserializer {
     val data = Json { this.encodeDefaults = true; this.ignoreUnknownKeys = true }
 
     inline fun <reified T> decode(value : String?) : T? {
-        if(value == null)
+        if(value == null) {
             return null
-
+        }
         return data.decodeFromString(value)
     }
 
